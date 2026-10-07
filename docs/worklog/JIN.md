@@ -58,3 +58,4 @@
 - DAYLOG, SODAFM theme_color 전달받기
 - B1: 테이블·트리거 마이그레이션
 
+이거
