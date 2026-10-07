@@ -2,62 +2,54 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { LoginRequired } from "@/components/order/LoginRequired";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Button, Card, Input, SectionHeader, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, SectionHeader, Skeleton } from "@/components/ui";
 import { getErrorMessage } from "@/constants/error-messages";
-import { signOut, updateProfile } from "@/services/auth";
-import type { Profile } from "@/types/app";
+import { signOut } from "@/services/auth";
+
+type MenuItem = { label: string; href?: string };
+
+// href가 없으면 준비 중인 메뉴
+const MENU: { title: string; items: MenuItem[] }[] = [
+  {
+    title: "쇼핑",
+    items: [{ label: "주문/취소 내역", href: "/orders" }],
+  },
+  {
+    title: "내 정보",
+    items: [
+      { label: "배송 주소 관리" },
+      { label: "내 정보 수정", href: "/mypage/profile" },
+    ],
+  },
+];
 
 export default function MyPage() {
   const router = useRouter();
-  const { profile: authProfile, initialized } = useAuth();
-  // 저장 직후에는 AuthProvider가 새 프로필을 모르므로 저장 결과를 우선 보여준다.
-  const [saved, setSaved] = useState<Profile | null>(null);
-  const profile = saved?.id === authProfile?.id ? saved : authProfile;
-  const [edited, setEdited] = useState<{ nickname?: string; phone?: string }>({});
-  const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { profile, initialized } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
-
-  const form = {
-    nickname: edited.nickname ?? profile?.nickname ?? "",
-    phone: edited.phone ?? profile?.phone ?? "",
-  };
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!form.nickname.trim()) return setMessage({ type: "error", text: "닉네임을 입력해주세요." });
-
-    setSaving(true);
-    setMessage(null);
-    try {
-      setSaved(await updateProfile({ nickname: form.nickname.trim(), phone: form.phone.trim() || null }));
-      setEdited({});
-      setMessage({ type: "ok", text: "저장했어요." });
-    } catch (error) {
-      setMessage({ type: "error", text: getErrorMessage(error) });
-    }
-    setSaving(false);
-  }
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSignOut() {
     setSigningOut(true);
+    setError(null);
     try {
       await signOut();
       router.replace("/");
       router.refresh();
-    } catch (error) {
-      setMessage({ type: "error", text: getErrorMessage(error) });
+    } catch (e) {
+      setError(getErrorMessage(e));
       setSigningOut(false);
     }
   }
 
   if (!initialized) {
     return (
-      <div className="content-shell py-8 md:py-12">
-        <Skeleton className="h-64 w-full" />
+      <div className="content-shell max-w-3xl py-8 md:py-12">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="mt-6 h-64 w-full" />
       </div>
     );
   }
@@ -81,26 +73,32 @@ export default function MyPage() {
           </div>
           <Button variant="outline" size="sm" loading={signingOut} onClick={handleSignOut}>로그아웃</Button>
         </Card>
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-        <Link href="/orders" className="block">
-          <Card className="flex items-center justify-between p-5 font-bold transition-shadow hover:shadow-lg">
-            주문 내역<span aria-hidden="true">›</span>
-          </Card>
-        </Link>
-
-        <Card className="p-6">
-          <h2 className="text-lg font-black">내 정보 수정</h2>
-          <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
-            <Input label="닉네임" name="nickname" value={form.nickname} onChange={(e) => setEdited((prev) => ({ ...prev, nickname: e.target.value }))} />
-            <Input label="연락처" name="phone" type="tel" inputMode="tel" placeholder="01012345678" value={form.phone} onChange={(e) => setEdited((prev) => ({ ...prev, phone: e.target.value }))} />
-            {message && (
-              <p role={message.type === "error" ? "alert" : "status"} className={`text-sm ${message.type === "error" ? "text-danger" : "text-brand-strong"}`}>
-                {message.text}
-              </p>
-            )}
-            <Button type="submit" loading={saving}>저장</Button>
-          </form>
-        </Card>
+        {MENU.map((section) => (
+          <section key={section.title} aria-labelledby={`menu-${section.title}`}>
+            <h2 id={`menu-${section.title}`} className="mb-2 px-1 text-sm font-bold text-muted">{section.title}</h2>
+            <Card>
+              <ul className="divide-y divide-line">
+                {section.items.map((item) => (
+                  <li key={item.label}>
+                    {item.href ? (
+                      <Link href={item.href} className="flex min-h-14 items-center justify-between gap-4 px-5 font-bold transition-colors hover:bg-neutral-50">
+                        {item.label}
+                        <span aria-hidden="true" className="text-muted">›</span>
+                      </Link>
+                    ) : (
+                      <div aria-disabled="true" className="flex min-h-14 items-center justify-between gap-4 px-5 font-bold text-muted">
+                        {item.label}
+                        <Badge className="bg-neutral-100 text-muted">준비 중</Badge>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </section>
+        ))}
       </div>
     </div>
   );

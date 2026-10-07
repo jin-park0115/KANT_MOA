@@ -82,7 +82,7 @@ export function OrderDetail() {
   if (current?.error) {
     return (
       <div className="content-shell py-8 md:py-12">
-        <EmptyState title="주문을 불러오지 못했어요" description={current.error} action={<Link href="/orders"><Button>주문 내역으로</Button></Link>} />
+        <EmptyState title="주문을 불러오지 못했어요" description={current.error} action={<Link href="/orders"><Button>주문/취소 내역으로</Button></Link>} />
       </div>
     );
   }
@@ -90,7 +90,7 @@ export function OrderDetail() {
   if (!order) {
     return (
       <div className="content-shell py-8 md:py-12">
-        <EmptyState title="주문을 찾을 수 없어요" action={<Link href="/orders"><Button>주문 내역으로</Button></Link>} />
+        <EmptyState title="주문을 찾을 수 없어요" action={<Link href="/orders"><Button>주문/취소 내역으로</Button></Link>} />
       </div>
     );
   }
@@ -143,7 +143,7 @@ export function OrderDetail() {
               주문 취소
             </Button>
           )}
-          <Link href="/orders"><Button variant="ghost">주문 내역</Button></Link>
+          <Link href="/orders"><Button variant="ghost">주문/취소 내역</Button></Link>
           <Link href="/category/all"><Button variant="ghost">쇼핑 계속하기</Button></Link>
         </div>
       </div>
