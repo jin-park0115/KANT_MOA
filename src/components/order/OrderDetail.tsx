@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LoginRequired } from "@/components/order/LoginRequired";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { getErrorMessage } from "@/constants/error-messages";
-import { cancelOrder, getOrder, payOrder, type Order } from "@/mocks/orders";
+import { useCart } from "@/hooks/useCart";
+import { cancelOrder, getOrder, payOrder } from "@/services/orders";
+import type { Order } from "@/types/app";
 
 const TITLES = {
   pending: "결제가 완료되지 않았어요",
@@ -14,15 +18,29 @@ const TITLES = {
   cancelled: "취소된 주문이에요",
 } as const;
 
+// 어떤 주문·사용자에 대한 결과인지 함께 보관해서, 주소나 계정이 바뀌면 이전 결과를 보여주지 않는다.
+type Loaded = { key: string; order: Order | null; error: string | null };
+
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const [order, setOrder] = useState<Order | null | undefined>(undefined); // undefined = 로딩 중, null = 없는 주문
+  const { profile, initialized } = useAuth();
+  const { refresh: refreshCart } = useCart();
+  const userId = profile?.id ?? null;
+  const key = `${userId}:${id}`;
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getOrder(id).then(setOrder);
-  }, [id]);
+    if (!userId) return;
+    let active = true;
+    getOrder(id)
+      .then((order) => active && setLoaded({ key, order, error: null }))
+      .catch((e) => active && setLoaded({ key, order: null, error: getErrorMessage(e) }));
+    return () => {
+      active = false;
+    };
+  }, [id, userId, key]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -32,11 +50,20 @@ export function OrderDetail() {
     } catch (e) {
       setError(getErrorMessage(e));
     }
-    setOrder(await getOrder(id));
+    try {
+      setLoaded({ key, order: await getOrder(id), error: null });
+    } catch (e) {
+      setError(getErrorMessage(e));
+    }
+    // 결제되면 결제된 상품이 장바구니에서 빠진다.
+    await refreshCart().catch(() => {});
     setBusy(false);
   }
 
-  if (order === undefined) {
+  const current = loaded?.key === key ? loaded : null;
+  const order = current?.order;
+
+  if (!initialized || (userId && !current)) {
     return (
       <div className="content-shell py-8 md:py-12">
         <Skeleton className="h-72 w-full" />
@@ -44,7 +71,23 @@ export function OrderDetail() {
     );
   }
 
-  if (order === null) {
+  if (!userId) {
+    return (
+      <div className="content-shell py-8 md:py-12">
+        <LoginRequired next={`/orders/${id}`} />
+      </div>
+    );
+  }
+
+  if (current?.error) {
+    return (
+      <div className="content-shell py-8 md:py-12">
+        <EmptyState title="주문을 불러오지 못했어요" description={current.error} action={<Link href="/orders"><Button>주문 내역으로</Button></Link>} />
+      </div>
+    );
+  }
+
+  if (!order) {
     return (
       <div className="content-shell py-8 md:py-12">
         <EmptyState title="주문을 찾을 수 없어요" action={<Link href="/orders"><Button>주문 내역으로</Button></Link>} />

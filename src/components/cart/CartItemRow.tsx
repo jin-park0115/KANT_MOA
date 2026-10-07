@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
-import type { CartItem } from "@/mocks/cart";
+import type { CartItem } from "@/types/app";
 import { QuantityStepper } from "./QuantityStepper";
 
 interface CartItemRowProps {
