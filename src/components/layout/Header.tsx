@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CartIcon, SearchIcon, UserIcon } from "./Icons";
+import { AccountActions } from "./AccountActions";
+import { CartIcon, SearchIcon } from "./Icons";
 import { Logo } from "./Logo";
 
 const navItems = [
@@ -22,7 +23,7 @@ export function Header() {
             <CartIcon />
             <span className="absolute right-0.5 top-0.5 grid size-[17px] place-items-center rounded-full bg-brand text-[10px] font-bold text-white">0</span>
           </Link>
-          <Link href="/login" className="hidden h-10 items-center gap-1.5 rounded-full border border-line px-4 text-sm font-semibold transition-colors hover:border-brand hover:text-brand sm:flex"><UserIcon className="size-[19px]" />로그인</Link>
+          <AccountActions />
         </div>
       </div>
     </header>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
@@ -18,12 +19,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ko" className={geist.variable}>
       <body>
         <a className="skip-link" href="#main-content">본문 바로가기</a>
-        <div className="flex min-h-dvh flex-col">
-          <Header />
-          <main id="main-content" className="min-w-0 flex-1 pb-16 md:pb-0">{children}</main>
-          <Footer />
-          <MobileBottomNav />
-        </div>
+        <AuthProvider>
+          <div className="flex min-h-dvh flex-col">
+            <Header />
+            <main id="main-content" className="min-w-0 flex-1 pb-16 md:pb-0">{children}</main>
+            <Footer />
+            <MobileBottomNav />
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

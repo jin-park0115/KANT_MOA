@@ -1,4 +1,4 @@
-import type { AppErrorCode } from "@/mocks/errors"; // TODO: services 머지 후 "@/services/errors"로 교체
+import type { AppErrorCode } from "@/services/errors";
 
 export const ERROR_MESSAGES: Record<AppErrorCode, string> = {
   NOT_AUTHENTICATED: "로그인이 필요해요.",
