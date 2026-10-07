@@ -20,7 +20,7 @@ const MENU: { title: string; items: MenuItem[] }[] = [
   {
     title: "내 정보",
     items: [
-      { label: "배송 주소 관리" },
+      { label: "배송 주소 관리", href: "/mypage/addresses" },
       { label: "내 정보 수정", href: "/mypage/profile" },
     ],
   },
