@@ -38,10 +38,10 @@ export function AccountActions() {
 
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Link href="/mypage" className="h-10 rounded-full px-3 text-sm font-bold leading-10 hover:bg-neutral-100">
+      <Link href="/mypage" className="h-10 rounded-full px-3 text-sm font-bold leading-10 transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:via-violet-50 hover:to-pink-50 hover:text-violet-700 hover:shadow-sm">
         {profile.nickname}
       </Link>
-      <button type="button" onClick={handleSignOut} disabled={loading} className="h-10 rounded-full px-3 text-sm font-semibold text-muted hover:bg-neutral-100 hover:text-foreground disabled:cursor-wait">
+      <button type="button" onClick={handleSignOut} disabled={loading} className="h-10 rounded-full px-3 text-sm font-semibold text-muted transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:via-violet-50 hover:to-pink-50 hover:text-violet-700 hover:shadow-sm disabled:cursor-wait">
         {loading ? "로그아웃 중" : "로그아웃"}
       </button>
     </div>
