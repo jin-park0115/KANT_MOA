@@ -13,6 +13,20 @@ export type Artist = {
   themeColor: string | null;
 };
 
+export type ArtistMember = {
+  id: number;
+  name: string; // '선우' (상품 옵션명과 동일)
+  nameEn: string; // 'SUNWOO'
+  position: string | null;
+  color: string | null; // 멤버 컬러 '#FF8A3D'
+  mascot: string | null;
+  birthday: string | null; // 'YYYY-MM-DD'
+  mbti: string | null;
+  description: string | null; // 한 줄 소개
+  tags: string[];
+  imageUrl: string | null; // 정사각형 1080×1080
+};
+
 export type Category = {
   id: number;
   name: string; // '앨범'

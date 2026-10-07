@@ -1,3 +1,32 @@
+## 2026-10-07 | 아티스트 멤버 소개(artist_members) · 테마 색상
+
+- 작업자: jin
+- 브랜치: dev/jin
+- 관련 이슈 / PR: chungman 요청 (아티스트 페이지 멤버 소개) / -
+- 에이전트 사용: O (Claude Code)
+
+### 요청한 작업
+- artist_members 테이블, getArtistMembers(slug), 멤버 이미지 경로 규칙
+
+### 한 일
+- `supabase/migrations/20261007000009_add_artist_members.sql`: 테이블·RLS + 13명 데이터 + DAYLOG/SODAFM 테마 색상 + 앨범명 [LIFTOFF] → db push (jin 실행)
+- `getArtistMembers` (services/products.ts), `ArtistMember` 타입, database.ts 재생성
+- API_SPEC 2장, DB_DESIGN 2장 정책·ERD·6-12 반영
+- 실제 DB 검증 6항목 통과
+
+### 결정 사항 / 이유
+- 굿즈 멤버 옵션은 기존 option_name 유지, 멤버 테이블은 소개 전용 (FK 없음)
+- description·tags 컬럼 추가 (DAYLOG·SODAFM 화면에 한 줄 소개·해시태그 존재)
+- 이미지 파일명은 영문 소문자 (`members/sunwoo.webp`)
+- DAYLOG·SODAFM 마스코트·생일·MBTI는 컨셉에 맞춰 임의 작성 (jin 승인)
+- seed.sql은 수정하지 않음 (변경 시 --include-seed 재실행되면 중복 에러)
+
+### 멈춘 지점 / 보고한 내용
+- 없음
+
+### 남은 일 / TODO
+- 멤버 사진 zip 받아서 업로드 (ORBITON 폴더는 chungman PC)
+
 ## 2026-10-07 | 배송지(addresses) 추가 · 비회원 장바구니 순서 버그
 
 - 작업자: jin
