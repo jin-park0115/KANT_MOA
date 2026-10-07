@@ -25,7 +25,7 @@
 
 ## 3. 역할 분담
 
-팀 구성: 백엔드 1명, 프론트엔드 3명 (총 4명)
+팀 구성: 백엔드 1명(jin), 프론트엔드 3명(jina, chungman, sungho) — 총 4명
 
 | 담당 | 소유 영역 |
 |---|---|
@@ -156,7 +156,7 @@ develop       ← 통합 브랜치 (개인 브랜치 PR 대상)
 dev/<이름>    ← 개인 작업 브랜치 (본인만 커밋)
 ```
 
-브랜치 이름 예시: `dev/minsu`, `dev/jiwoo` (영문 소문자)
+팀 브랜치: `dev/jin`(백엔드), `dev/jina`, `dev/chungman`, `dev/sungho` (영문 소문자, worklog 파일은 `docs/worklog/<대문자 이름>.md`)
 
 ### 작업 흐름
 
