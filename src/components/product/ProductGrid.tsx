@@ -11,7 +11,7 @@ export function ProductGrid({ products }: { products: ProductSummary[] }) {
       <EmptyState
         title="아직 등록된 굿즈가 없어요"
         description="곧 새로운 굿즈로 찾아올게요."
-        action={<Link href="/" className="inline-flex h-11 items-center rounded-full bg-foreground px-5 text-sm font-bold text-white hover:bg-neutral-800">홈으로 가기</Link>}
+        action={<Link href="/" className="inline-flex h-11 items-center rounded-full bg-foreground px-5 text-sm font-bold hover:bg-neutral-800"><span className="text-white">홈으로 가기</span></Link>}
       />
     );
   }
