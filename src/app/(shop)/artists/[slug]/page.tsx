@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArtistHero } from "@/components/product/ArtistHero";
+import { ArtistBanners, ArtistBannersSkeleton } from "@/components/product/ArtistBanners";
 import type { SearchParams } from "@/components/product/listParams";
 import { LoadError } from "@/components/product/LoadError";
 import { ProductGridSkeleton } from "@/components/product/ProductGrid";
 import { ProductListSection } from "@/components/product/ProductListSection";
-import { Skeleton } from "@/components/ui";
 import { getArtist } from "@/services/products";
 import type { Artist } from "@/types/app";
 
@@ -38,25 +37,28 @@ async function ArtistContent({ params, searchParams }: ArtistPageProps) {
   if (!artist) notFound();
 
   return (
-    <>
-      <ArtistHero artist={artist} />
-      <div className="content-shell py-8 md:py-12">
+    <div className="content-shell py-6 md:py-10">
+      <h1 className="sr-only">{artist.name}</h1>
+      <Suspense fallback={<ArtistBannersSkeleton />}>
+        <ArtistBanners artist={artist} />
+      </Suspense>
+      <section id="artist-products" aria-label={`${artist.name} 굿즈`} className="mt-12 scroll-mt-24">
         <h2 className="mb-6 text-xl font-black md:text-2xl">{artist.name} 굿즈</h2>
         <Suspense fallback={<ProductGridSkeleton />}>
           <ProductListSection filter={{ artistSlug: artist.slug }} basePath={`/artists/${artist.slug}`} searchParams={searchParams} />
         </Suspense>
-      </div>
-    </>
+      </section>
+    </div>
   );
 }
 
 function ArtistPageSkeleton() {
   return (
-    <>
-      <Skeleton className="h-72 w-full rounded-none md:h-96" />
-      <div className="content-shell py-8 md:py-12">
+    <div className="content-shell py-6 md:py-10">
+      <ArtistBannersSkeleton />
+      <div className="mt-12">
         <ProductGridSkeleton />
       </div>
-    </>
+    </div>
   );
 }
