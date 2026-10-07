@@ -1,3 +1,31 @@
+## 2026-10-07 | 아티스트 멤버 소개 페이지 추가
+
+- 작업자: chungman
+- 브랜치: dev/chunga
+- 관련 이슈 / PR: 없음 / (PR 생성 예정)
+- 에이전트 사용: O (Claude, Cowork)
+
+### 요청한 작업
+- 아티스트 페이지 첫 번째 배너(단체 사진)를 누르면 멤버 소개 화면으로 이동
+
+### 한 일
+- 작업 전 `git fetch origin` → develop과 동일 상태 확인 (PR #22: `artist_members` 테이블, `getArtistMembers` 반영됨), 다른 브랜치와 겹치는 파일 없음 확인
+- `src/app/(shop)/artists/[slug]/about/page.tsx` 추가: 단체 사진 배너(`heroImageUrl`) + 멤버 카드 목록 (`getArtist`, `getArtistMembers`)
+- `src/components/product/MemberCard.tsx` 추가: 프로필 사진, 이름·영문명, 포지션, 한 줄 소개, 생일·MBTI·마스코트, 태그, 멤버 컬러 표시
+- `ArtistBanners.tsx`: 첫 배너 링크를 `#artist-products` → `/artists/[slug]/about`, 문구를 "멤버 소개 보기"로 변경
+- 로딩(스켈레톤)·빈(EmptyState)·에러(LoadError)·정상 상태 구현, `npx tsc --noEmit`, lint 통과
+- 멤버 프로필 사진을 `artist_members.image_path` 경로에 맞춰 1080×1080 webp로 준비 (리포 밖 `ORBITON/storage-upload/artists/orbit-on/members/`)
+
+### 결정 사항 / 이유
+- 모달 대신 별도 주소(`/about`)로 만들어 새로고침·공유·뒤로가기가 자연스럽게 동작하도록 함
+- 멤버 컬러는 데이터라 CSS 변수(`--member-color`)로만 넘기고, 글자색에는 쓰지 않음 (밝은 색은 대비가 부족해서 점·하단 띠로만 표시)
+
+### 멈춘 지점 / 보고한 내용
+- 없음
+
+### 남은 일 / TODO
+- 멤버 사진·단체 사진(hero.webp) Storage 업로드/교체 요청 (jin)
+
 ## 2026-10-07 | 아티스트 페이지 상단을 배너 2개 캐러셀로 변경
 
 - 작업자: chungman
