@@ -6,10 +6,9 @@ import { CartItemRow } from "@/components/cart/CartItemRow";
 import { Button, Card, EmptyState, SectionHeader, Skeleton } from "@/components/ui";
 import { getErrorMessage } from "@/constants/error-messages";
 import { useCart } from "@/hooks/useCart";
-import { seedCart } from "@/mocks/cart";
 
 export default function CartPage() {
-  const { items, totalQuantity, totalPrice, loaded, updateQuantity, removeItem, refresh } = useCart();
+  const { items, totalQuantity, totalPrice, loaded, updateQuantity, removeItem } = useCart();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,14 +39,7 @@ export default function CartPage() {
         <EmptyState
           title="장바구니가 비어 있어요"
           description="마음에 드는 굿즈를 담아보세요."
-          action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/category/all"><Button>상품 보러가기</Button></Link>
-              {process.env.NODE_ENV === "development" && (
-                <Button variant="outline" onClick={() => { seedCart(); void refresh(); }}>샘플 담기 (개발용)</Button>
-              )}
-            </div>
-          }
+          action={<Link href="/category/all"><Button>상품 보러가기</Button></Link>}
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
