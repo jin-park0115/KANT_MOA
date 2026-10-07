@@ -20,7 +20,7 @@
 | 회원 | Supabase Auth(`auth.users`) + `profiles` 1:1, 가입 시 트리거로 자동 생성 |
 | 관리자 | **없음.** 아티스트·카테고리·상품·재고는 Supabase 대시보드 또는 seed SQL로 관리 (service role은 RLS를 우회) |
 | 카테고리 | 7개 고정: 앨범, 응원용품, 인형, 액세서리, 의류, 생활용품, 멤버십. 고정이지만 표시 순서·URL slug·FK 무결성을 위해 `categories` 테이블로 관리 |
-| 멤버별 굿즈 | 멤버 테이블 없이 variant `option_name`에 멤버 이름. 옵션 선택 시 메인 이미지는 바뀌지 않음 (variant 이미지 없음) |
+| 멤버별 굿즈 | 굿즈 옵션은 variant `option_name`에 멤버 이름 (멤버 테이블과 FK 없음). 멤버 소개는 `artist_members` 테이블 (6-12). 옵션 선택 시 메인 이미지는 바뀌지 않음 (variant 이미지 없음) |
 | 이미지 | 상품·아티스트 이미지는 Supabase Storage(public 버킷). DB에는 전체 URL이 아닌 **버킷 내 경로**만 저장, URL은 services에서 `getPublicUrl()`로 생성. 로고·배너 등 디자인 고정 이미지는 프론트 `public/` |
 | 멤버십 카드 | 일반 상품과 동일하게 처리. 아티스트별 상품 + variant `max_per_user = 1`. 멤버십 혜택(회원 전용 구매 등)은 범위 밖 |
 | 옵션 | 사이즈·앨범 버전·멤버 모두 `product_variants`로 처리. 옵션 없는 상품도 '기본' variant 1개 보유 |
@@ -39,6 +39,7 @@
 erDiagram
     auth_users ||--|| profiles : "1:1"
     artists ||--o{ products : "보유"
+    artists ||--o{ artist_members : "멤버 소개"
     categories ||--o{ products : "분류"
     products ||--o{ product_images : "이미지"
     products ||--|{ product_variants : "옵션"
@@ -749,6 +750,18 @@ SQL 원본: `supabase/migrations/20261007000008_add_addresses.sql`
 | 기본 변경 | `set_default_address(p_address_id)` RPC만 가능. 기존 해제 → 새로 지정 순서 (유니크 인덱스가 행 단위로 즉시 검사되므로) |
 | RLS | `addresses_own`: 본인 것만 CRUD. `is_default` 컬럼은 update 권한 회수 (RPC·트리거는 SECURITY DEFINER) |
 | 주문과의 관계 | FK 없음. 주문은 주소 문자열을 스냅샷으로 저장 |
+
+### 6-12. 아티스트 멤버 (artist_members)
+
+SQL 원본: `supabase/migrations/20261007000009_add_artist_members.sql` (테이블 + 13명 데이터)
+
+| 항목 | 규칙 |
+|---|---|
+| 용도 | 아티스트 페이지 멤버 소개 전용. 상품·옵션·주문과 FK 없음 |
+| 컬럼 | name, name_en, position, color, mascot, birthday, mbti, description(한 줄 소개), tags(text[]), image_path, sort_order |
+| 이미지 | artists 버킷 `<artist-slug>/members/<name_en 소문자>.webp`, 정사각형 1080×1080 |
+| RLS | 누구나 조회만. 쓰기 정책 없음 (대시보드/마이그레이션으로 관리) |
+| 이름 | `name`은 굿즈 옵션명(`product_variants.option_name`)과 동일하게 유지 |
 
 ---
 
