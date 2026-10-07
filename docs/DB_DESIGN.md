@@ -60,6 +60,7 @@ erDiagram
         text name_ko "오르빗온"
         text slug UK
         text logo_path
+        text hero_image_path "nullable"
         text theme_color
         int sort_order
     }
@@ -182,6 +183,7 @@ create table public.artists (
   name_ko text not null,
   slug text not null unique,
   logo_path text,          -- artists 버킷 내 경로
+  hero_image_path text,    -- artists 버킷 내 경로 (아티스트 페이지 배경)
   theme_color text,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
@@ -654,21 +656,25 @@ products/
    ├─ main.webp        # products.thumbnail_path
    └─ detail-1.webp    # product_images.image_path (sort_order 순)
 artists/
-└─ <artist-slug>/logo.webp
+└─ <artist-slug>/
+   ├─ logo.webp        # artists.logo_path
+   └─ hero.webp        # artists.hero_image_path (아티스트 페이지 배경)
 ```
 
 - 파일명은 영문 소문자·숫자·하이픈만 사용, 확장자는 `.webp` 권장
 - 업로드 전 가로 1200px 이하로 리사이즈
+- 예외: 아티스트 배경(`hero.webp`)은 **1920×720, webp**
 
 ### 6-10. 초기 데이터 (seed 예시)
 
 관리자 기능이 없으므로 상품 등록·재고 수정은 SQL Editor에서 직접 실행합니다.
 
 ```sql
-insert into public.artists (name, name_ko, slug, logo_path, sort_order) values
-  ('ORBIT:ON', '오르빗온',   'orbit-on', 'orbit-on/logo.webp', 1),
-  ('DAYLOG',   '데이로그',   'daylog',   'daylog/logo.webp',   2),
-  ('SODAFM',   '소다에프엠', 'sodafm',   'sodafm/logo.webp',   3);
+-- theme_color: 각 그룹 담당 프론트가 정해서 전달 (미정이면 null)
+insert into public.artists (name, name_ko, slug, logo_path, hero_image_path, theme_color, sort_order) values
+  ('ORBIT:ON', '오르빗온',   'orbit-on', 'orbit-on/logo.webp', 'orbit-on/hero.webp', '#B8A4FF', 1),
+  ('DAYLOG',   '데이로그',   'daylog',   'daylog/logo.webp',   'daylog/hero.webp',   null,      2),  -- TODO: 색상
+  ('SODAFM',   '소다에프엠', 'sodafm',   'sodafm/logo.webp',   'sodafm/hero.webp',   null,      3);  -- TODO: 색상
 
 -- 카테고리는 고정 7개
 insert into public.categories (name, slug, sort_order) values

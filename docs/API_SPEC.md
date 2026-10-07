@@ -28,6 +28,7 @@ type Artist = {
   nameKo: string;        // '오르빗온'
   slug: string;          // 'orbit-on'
   logoUrl: string | null;
+  heroImageUrl: string | null;  // 아티스트 페이지 상단 배경 (1920×720)
   themeColor: string | null;
 };
 
