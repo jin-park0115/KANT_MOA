@@ -8,8 +8,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-foreground text-white hover:bg-neutral-800 disabled:bg-neutral-300",
-  secondary: "bg-brand text-white hover:bg-brand-strong disabled:bg-teal-200",
+  primary: "bg-foreground text-white hover:bg-gradient-to-r hover:from-teal-400 hover:via-violet-400 hover:to-pink-400 hover:shadow-lg hover:shadow-violet-200/50 disabled:bg-neutral-300 disabled:bg-none",
+  secondary: "bg-brand text-white hover:bg-gradient-to-r hover:from-teal-400 hover:via-violet-400 hover:to-pink-400 hover:shadow-lg hover:shadow-violet-200/50 disabled:bg-teal-200 disabled:bg-none",
   outline: "border border-line bg-white text-foreground hover:border-neutral-400",
   ghost: "bg-transparent text-foreground hover:bg-neutral-100",
   danger: "bg-danger text-white hover:bg-red-600 disabled:bg-red-200",
