@@ -9,7 +9,9 @@
 - `supabase/migrations/` : 테이블, 인덱스, 트리거, RLS, RPC 함수
 - `supabase/seed.sql` : 아티스트·카테고리·샘플 상품
 - `src/lib/supabase/` : Supabase 클라이언트 생성
-- `src/services/` : 프론트가 호출하는 데이터 접근 함수
+- `src/services/` : 프론트가 호출하는 데이터 접근 함수 (명세: `docs/API_SPEC.md`)
+- `src/types/app.ts` : services 반환 타입 (프론트와 공유)
+- `src/proxy.ts` : 세션 갱신 (Next.js 16의 Proxy, 구 middleware)
 - `src/types/database.ts` : 자동 생성 타입 (직접 편집 금지)
 
 `src/app/`, `src/components/`는 프론트 담당 영역이므로 수정하지 않습니다.
@@ -118,6 +120,13 @@ DB_DESIGN.md 6장의 SQL을 아래 순서로 나눠서 커밋합니다.
 | `pay_order` | `p_order_id uuid` | void | NOT_AUTHENTICATED, INVALID_ORDER, PURCHASE_LIMIT_EXCEEDED, OUT_OF_STOCK |
 | `cancel_order` | `p_order_id uuid` | void | NOT_AUTHENTICATED, INVALID_ORDER, ALREADY_CANCELLED |
 
+Supabase Auth 에러는 `services/auth.ts`에서 아래 코드로 변환합니다 (RPC 아님).
+
+| 함수 | 코드 |
+|---|---|
+| `signIn` | INVALID_CREDENTIALS |
+| `signUp` | EMAIL_ALREADY_EXISTS, WEAK_PASSWORD |
+
 에러는 `raise exception '<CODE>' using detail = '<부가정보>'` 형태로 던집니다. supabase-js에서는 `error.message`에 코드, `error.details`에 부가정보(variant_id 등)가 들어옵니다. **새 에러 코드를 추가하면 이 표와 `src/services/errors.ts`를 함께 갱신**합니다.
 
 ## 8. services 레이어 규칙
@@ -136,6 +145,9 @@ export const APP_ERROR_CODES = [
   'OUT_OF_STOCK',
   'INVALID_ORDER',
   'ALREADY_CANCELLED',
+  'INVALID_CREDENTIALS',
+  'EMAIL_ALREADY_EXISTS',
+  'WEAK_PASSWORD',
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number] | 'UNKNOWN';
@@ -218,7 +230,7 @@ RPC 작업 후 아래를 확인합니다 (SQL Editor 또는 테스트 계정 2�
 
 - [ ] `docs/SETUP.md`, `docs/BACKEND.md`, `docs/DB_DESIGN.md`를 읽었다
 - [ ] 연결된 이슈 번호와 작업 범위를 확인했다
-- [ ] `develop` 최신 상태에서 `feat/*` 또는 `fix/*` 브랜치를 만들었다
+- [ ] `dev/<이름>` 브랜치에서 작업 중이고, `origin/develop`을 머지해 최신 상태로 맞췄다
 
 작업 중
 

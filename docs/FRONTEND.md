@@ -38,8 +38,8 @@
 | `package.json`, `package-lock.json` | 누구나 가능하나 **의존성 추가는 PR 하나에 단독으로**, 팀 공지 후 |
 | `src/app/layout.tsx`, `src/app/globals.css` | jina |
 | `tailwind.config.*`, `next.config.*` | jina |
-| `middleware.ts` / `proxy.ts` | 백엔드 |
-| `src/services/`, `src/lib/supabase/`, `src/types/database.ts` | 백엔드 |
+| `src/proxy.ts` | 백엔드 |
+| `src/services/`, `src/lib/supabase/`, `src/types/database.ts`, `src/types/app.ts` | 백엔드 |
 | `docs/SETUP.md` | 팀 합의 후 누구나 |
 
 ## 2. 브랜치 규칙 (이름별 브랜치)
