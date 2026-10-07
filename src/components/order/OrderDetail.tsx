@@ -144,7 +144,7 @@ export function OrderDetail() {
             </Button>
           )}
           <Link href="/orders"><Button variant="ghost">주문/취소 내역</Button></Link>
-          <Link href="/category/all"><Button variant="ghost">쇼핑 계속하기</Button></Link>
+          <Link href="/"><Button variant="ghost">쇼핑 계속하기</Button></Link>
         </div>
       </div>
     </div>

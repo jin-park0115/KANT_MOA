@@ -101,7 +101,7 @@ export function OrderList() {
         <EmptyState
           title={emptyTitle}
           description={tab === "all" ? "첫 굿즈를 주문해보세요." : undefined}
-          action={tab === "all" ? <Link href="/category/all"><Button>상품 보러가기</Button></Link> : undefined}
+          action={tab === "all" ? <Link href="/"><Button>상품 보러가기</Button></Link> : undefined}
         />
       ) : (
         <ul className="space-y-4">
