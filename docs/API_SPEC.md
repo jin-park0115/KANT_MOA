@@ -147,12 +147,12 @@ type ProductQuery = {
 | `signUp(input)` | `{ email; password; nickname }` | `void` | 클라이언트 | `EMAIL_ALREADY_EXISTS`, `WEAK_PASSWORD` |
 | `signIn(input)` | `{ email; password }` | `void` | 클라이언트 | `INVALID_CREDENTIALS` |
 | `signOut()` | - | `void` | 클라이언트 | - |
-| `getProfile()` | - | `Profile \| null` (비로그인 시 null) | 서버/클라이언트 | - |
+| `getProfile()` | - | `Profile \| null` (비로그인 시 null) | 클라이언트 | - |
 | `updateProfile(input)` | `{ nickname?; phone? }` | `Profile` | 클라이언트 | `NOT_AUTHENTICATED` |
 | `onAuthChange(cb)` | `(profile: Profile \| null) => void` | `() => void` (구독 해제) | 클라이언트 | - |
 
 - 로그인 직후 비회원 장바구니 병합(`mergeGuestCart`)은 **services 내부에서 자동 처리**합니다. 프론트는 앱 최상단 클라이언트 Provider에서 `onAuthChange`를 한 번 구독만 하면 됩니다.
-- 세션 갱신은 `src/proxy.ts`(Next.js 16의 Proxy, 구 middleware)에서 처리 — 백엔드 담당.
+- 로그인이 필요한 함수(auth·cart·orders)는 **클라이언트 컴포넌트 전용**입니다. 세션은 브라우저 클라이언트가 자동 갱신하므로 현재 `src/proxy.ts`는 없습니다. 서버 컴포넌트에서 로그인 정보가 필요해지면 백엔드에 요청하세요 (server.ts + proxy.ts 추가).
 - **이메일 인증 OFF**: 가입 즉시 로그인 상태가 됩니다 (`signUp` 성공 = 로그인 완료). 운영 전 재검토.
 
 ## 4. 장바구니 — `services/cart.ts`
@@ -180,8 +180,8 @@ type ProductQuery = {
 | `createOrder(input)` | `{ recipientName; recipientPhone; address }` | `string` (orderId) | 클라이언트 | `NOT_AUTHENTICATED`, `CART_EMPTY`, `UNAVAILABLE_ITEM`, `PURCHASE_LIMIT_EXCEEDED` |
 | `payOrder(orderId)` | `string` | `void` | 클라이언트 | `NOT_AUTHENTICATED`, `INVALID_ORDER`, `PURCHASE_LIMIT_EXCEEDED`, `OUT_OF_STOCK` |
 | `cancelOrder(orderId)` | `string` | `void` | 클라이언트 | `NOT_AUTHENTICATED`, `INVALID_ORDER`, `ALREADY_CANCELLED` |
-| `getOrders()` | - | `OrderSummary[]` (최신순) | 서버/클라이언트 | `NOT_AUTHENTICATED` |
-| `getOrder(orderId)` | `string` | `Order \| null` (남의 주문이면 null) | 서버/클라이언트 | `NOT_AUTHENTICATED` |
+| `getOrders()` | - | `OrderSummary[]` (최신순) | 클라이언트 | `NOT_AUTHENTICATED` |
+| `getOrder(orderId)` | `string` | `Order \| null` (남의 주문이면 null) | 클라이언트 | `NOT_AUTHENTICATED` |
 
 - `createOrder`는 **현재 장바구니 전체**를 주문합니다 (선택 주문 없음).
 - 주문서 "결제하기" 흐름: `createOrder` → `payOrder` → `/orders/{id}` (결제 완료) 이동.
