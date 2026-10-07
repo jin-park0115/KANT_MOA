@@ -42,7 +42,7 @@ export function LoginForm() {
       <Button type="submit" size="lg" fullWidth loading={loading}>로그인</Button>
       <p className="text-center text-sm text-muted">
         아직 회원이 아니신가요?{" "}
-        <Link href="/signup" className="font-bold text-brand-strong hover:underline">회원가입</Link>
+        <Link href="/signup" className="brand-gradient-text-hover font-bold text-brand-strong">회원가입</Link>
       </p>
     </form>
   );

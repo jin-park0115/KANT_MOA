@@ -29,7 +29,7 @@ export function AccountActions() {
 
   if (!profile) {
     return (
-      <Link href="/login" className="hidden h-10 items-center gap-1.5 rounded-full border border-line px-4 text-sm font-semibold transition-colors hover:border-brand hover:text-brand sm:flex">
+      <Link href="/login" className="brand-gradient-soft-hover hidden h-10 items-center gap-1.5 rounded-full border border-line px-4 text-sm font-semibold hover:border-violet-300 sm:flex">
         <UserIcon className="size-[19px]" />
         로그인
       </Link>
@@ -38,10 +38,10 @@ export function AccountActions() {
 
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Link href="/mypage" className="h-10 rounded-full px-3 text-sm font-bold leading-10 hover:bg-neutral-100">
-        {profile.nickname}
+      <Link href="/mypage" aria-label="마이페이지" title="마이페이지" className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-bold leading-10">
+        MY
       </Link>
-      <button type="button" onClick={handleSignOut} disabled={loading} className="h-10 rounded-full px-3 text-sm font-semibold text-muted hover:bg-neutral-100 hover:text-foreground disabled:cursor-wait">
+      <button type="button" onClick={handleSignOut} disabled={loading} className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-semibold text-muted disabled:cursor-wait">
         {loading ? "로그아웃 중" : "로그아웃"}
       </button>
     </div>
