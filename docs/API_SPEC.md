@@ -3,7 +3,7 @@
 > 프론트가 호출하는 유일한 데이터 인터페이스는 `src/services/`입니다. 이 문서는 그 함수들의 입력·출력·에러를 정의합니다.
 > 별도 REST API는 없습니다. 내부적으로는 Supabase(`from().select()`, `rpc()`)를 호출합니다.
 > 스키마·RPC 원본은 `docs/DB_DESIGN.md`, 백엔드 규칙은 `docs/BACKEND.md`를 따릅니다.
-> 상태: **초안 (v0.2)** — 이메일 인증·신규 파일·Auth 에러 코드 확정, 나머지는 프론트 리뷰 후 확정. 확정 전까지 프론트는 이 타입대로 `src/mocks/`를 만들어 개발합니다.
+> 상태: **확정 (v1.0)** — 프론트 3명 리뷰 완료. 변경 시 이 문서를 먼저 고치고 PR에서 프론트 담당자를 리뷰어로 지정합니다.
 
 ## 0. 공통 규칙
 
@@ -229,7 +229,7 @@ class AppError extends Error {
 | 주문 내역 | sungho | `getOrders` |
 | 마이페이지 | sungho | `getProfile`, `updateProfile` |
 
-## 8. 미확정 사항 (프론트·팀 확인 필요)
+## 8. 결정된 기본 방침 (필요해지면 변경 요청)
 
 1. **`UNAVAILABLE_ITEM`의 detail**: 현재 RPC는 어떤 상품이 문제인지 알려주지 않습니다. 필요하면 `create_order`에 `detail = variant_id` 추가.
 2. **주문서 배송 정보 기본값**: `profiles.phone`만 있고 주소는 저장하지 않습니다. 주소 저장이 필요하면 배송지 테이블 추가 (현재 범위 밖).
