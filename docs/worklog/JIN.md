@@ -1,3 +1,30 @@
+## 2026-10-07 | 백엔드 B1~B6 (마이그레이션·seed·services)
+
+- 작업자: jin
+- 브랜치: dev/jin
+- 관련 이슈 / PR: - / -
+- 에이전트 사용: O (Claude Code)
+
+### 요청한 작업
+- 프론트가 mock 없이 실제 데이터로 작업할 수 있도록 백엔드 전체 완료
+
+### 한 일
+- `supabase/migrations/` 7개 (테이블, 트리거, RLS, merge_cart, 주문 RPC, 실행 권한, Storage 버킷) + `supabase/seed.sql` → `db push --include-seed` (jin 실행)
+- `src/types/database.ts` 생성, `src/lib/supabase/client.ts`
+- `src/services/` products, auth, cart, orders, storage 작성
+- 실제 DB 검증: 카탈로그 13항목, BACKEND.md 10장 시나리오 포함 22항목 전부 통과
+
+### 결정 사항 / 이유
+- 카탈로그는 세션 없는 공개 클라이언트 → 서버/클라이언트 컴포넌트 모두 사용 가능
+- 로그인 필요한 함수는 클라이언트 전용, server.ts·proxy.ts는 필요해질 때 추가 (API_SPEC 3장 반영)
+
+### 멈춘 지점 / 보고한 내용
+- 이메일 인증이 켜져 있어 테스트 가입 실패 → jin이 대시보드에서 끔
+
+### 남은 일 / TODO
+- 브라우저에서 비회원 장바구니(localStorage)·로그인 병합 흐름 확인 (프론트 연동 시)
+- Storage 이미지 업로드, DAYLOG·SODAFM theme_color
+
 ## 2026-10-07 | 초기 세팅 · API 명세 · 공용 타입(B0)
 
 - 작업자: jin
