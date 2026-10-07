@@ -38,8 +38,8 @@ export function AccountActions() {
 
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Link href="/mypage" className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-bold leading-10">
-        {profile.nickname}
+      <Link href="/mypage" aria-label="마이페이지" title="마이페이지" className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-bold leading-10">
+        MY
       </Link>
       <button type="button" onClick={handleSignOut} disabled={loading} className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-semibold text-muted disabled:cursor-wait">
         {loading ? "로그아웃 중" : "로그아웃"}
