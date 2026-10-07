@@ -1,0 +1,74 @@
+## 2026-10-07 | 메인·아티스트·카테고리·상품 상세 페이지 구현
+
+- 작업자: chungman
+- 브랜치: dev/chunga
+- 관련 이슈 / PR: 없음 / (PR 생성 예정)
+- 에이전트 사용: O (Claude, Cowork)
+
+### 요청한 작업
+- FRONTEND.md 1장 chungman 담당 4개 페이지 구현 (메인, 아티스트, 카테고리·상품 목록, 상품 상세)
+- 최신 develop 기준으로 다른 팀원 작업과 충돌 없이 진행
+
+### 한 일
+- 작업 전 `git fetch origin` → `git merge origin/develop` (fast-forward, 충돌 없음)
+- 3장 4번 명령으로 dev/jin, dev/jina, dev/sungho가 수정할 파일과 겹치지 않는지 확인 (겹침 없음)
+- 페이지 추가
+  - `src/app/(shop)/page.tsx`: 메인 (소개 배너, 아티스트 목록 `getArtists`, 신상품 8개 `getProducts({ limit: 8 })`)
+  - `src/app/(shop)/artists/[slug]/page.tsx`: 아티스트 배경 영역 + 아티스트별 상품 목록
+  - `src/app/(shop)/category/[slug]/page.tsx`: 카테고리 탭(7개, `getCategories`) + 카테고리별 상품 목록
+  - `src/app/(shop)/products/[id]/page.tsx`: 상품 상세 (이미지, 가격, 옵션 선택, 수량, 장바구니 담기, 상세 설명·이미지)
+- `src/components/product/` 추가: ProductCard, ProductGrid(+스켈레톤), ProductImage, ProductListSection(정렬·더 보기), SortTabs, CategoryTabs, ArtistHero, ArtistCard, OptionSelector, ProductPurchasePanel, LoadError, listParams, artistTheme, formatPrice(임시)
+- 기본 템플릿 `src/app/page.tsx` 삭제 (`(shop)/page.tsx`와 같은 "/" 주소라 빌드 충돌)
+- 모든 데이터 화면에 로딩(Suspense + 스켈레톤)·빈(EmptyState)·에러(LoadError, `getErrorMessage`)·정상 상태 구현
+- `npx tsc --noEmit`, `npm run lint` 통과
+- (추가 요청) 메인에 위버스샵 아티스트 섹션처럼 아티스트별 패널 추가: 상단 배경 띠(heroImageUrl, 없으면 테마 색) + 아티스트 이름 링크 + 상품 4개씩 넘기는 캐러셀(최대 3페이지)
+  - `ArtistShowcase.tsx`, `ProductCarousel.tsx` 추가, 쓰지 않게 된 `ArtistCard.tsx` 삭제
+- (추가 요청) 바탕화면 ORBITON 이미지로 seed.sql 경로에 맞춘 Storage 업로드용 webp 8장 준비 (리포 밖, `ORBITON/storage-upload/`): artists/orbit-on/hero.webp, products/orbit-on/{1st-mini-launch, light-stick, acrylic-keyring, logo-hoodie}/…
+
+### 결정 사항 / 이유
+- 데이터는 `src/services/products.ts`만 사용, supabase 직접 호출 없음
+- cacheComponents 사용 중이라 params·searchParams를 읽는 부분과 services 호출을 Suspense 안 비동기 컴포넌트로 분리
+- 정렬·더 보기는 URL 쿼리(`?sort=`, `?limit=`)로 처리: 서버 컴포넌트로 유지하고 새로고침·공유 시에도 상태 유지
+- 아티스트 테마 색(`themeColor`)은 데이터라 Tailwind 클래스로 만들 수 없어 CSS 변수(`--artist-color`) 한 곳에만 style 사용. 값이 없으면 `--brand`로 대체
+- 배경 이미지(`heroImageUrl`)가 없으면 테마 색 그라데이션 표시 (jina 제안안 반영)
+- 장바구니 담기는 `useCart().addItem`을 사용하고, 수량 조절은 sungho의 `QuantityStepper`를 수정 없이 가져다 씀
+- 공용 컴포넌트(`src/components/ui/`)와 다른 사람 파일은 수정하지 않음
+
+### 멈춘 지점 / 보고한 내용
+- `formatPrice` 공용 유틸이 없어 `src/components/product/formatPrice.ts`에 임시로 만들고 jina에게 공용 유틸 요청
+- `next.config.ts`의 Supabase 이미지 도메인 설정은 dev/jin에 있고 develop에는 아직 미반영 → 머지 전에는 실제 이미지가 있는 상품에서 next/image 오류 가능
+- `npm run build`는 작업 환경에 Windows용 SWC만 설치돼 있어 에이전트가 실행하지 못함 → 사람이 로컬에서 실행 필요
+
+### 남은 일 / TODO
+- `npm run build` 통과 확인 후 PR 생성 (모바일·데스크톱 스크린샷 첨부)
+- 공용 `formatPrice`가 생기면 교체하고 임시 파일 삭제
+- 헤더의 `/artists`, `/category/all`, `/search` 링크는 담당 미정 (현재 404)
+- Storage 업로드는 대시보드(service role)에서만 가능 → `ORBITON/storage-upload/` 파일을 jin(또는 대시보드 권한자)이 같은 경로로 업로드 필요. 업로드 전에는 이미지가 깨져 보임
+- ORBIT:ON 로고(`orbit-on/logo.webp`)용 이미지는 아직 없음
+
+## 2026-10-07 | ORBIT:ON 아티스트 세계관·굿즈 소스 준비, 메인 화면 Figma 시안
+
+- 작업자: chungman
+- 브랜치: dev/chunga
+- 관련 이슈 / PR: 없음 / 없음
+- 에이전트 사용: O (Claude, Cowork)
+
+### 요청한 작업
+- 굿즈샵에 들어갈 가상 아이돌 그룹 기획, 이미지·굿즈 데이터 준비, 메인 화면 시안 제작
+
+### 한 일
+- 가상 그룹 ORBIT:ON(5인조) 기획: 멤버 5명의 컬러·마스코트, 앨범 3장 정의
+- 바탕화면 `ORBITON/` 폴더(리포 밖)에 그룹·굿즈 데이터(JSON, md), 앨범 커버, 멤버·단체·굿즈 사진 정리
+- Figma 파일 `ORBIT:ON 굿즈샵`에 Weverse Shop 구조를 참고한 메인 화면 시안 제작
+
+### 결정 사항 / 이유
+- 굿즈 이미지는 몽환적인 톤(더스티 파스텔, 홀로그램)으로 통일
+
+### 멈춘 지점 / 보고한 내용
+- Figma 시안에 사진 자동 삽입 실패 (작업 환경 네트워크가 figma.com 업로드 차단)
+- SETUP.md 팀 브랜치 표기(`dev/chungman`)와 실제 브랜치(`dev/chunga`)가 다름, 보고만 함
+
+### 남은 일 / TODO
+- Figma 시안 사진 채우기
+- 브랜치 이름 표기 팀과 맞추기
+
