@@ -39,6 +39,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          address1: string
+          address2: string | null
+          created_at: string
+          id: number
+          is_default: boolean
+          label: string | null
+          postal_code: string
+          recipient_name: string
+          recipient_phone: string
+          user_id: string
+        }
+        Insert: {
+          address1: string
+          address2?: string | null
+          created_at?: string
+          id?: never
+          is_default?: boolean
+          label?: string | null
+          postal_code: string
+          recipient_name: string
+          recipient_phone: string
+          user_id: string
+        }
+        Update: {
+          address1?: string
+          address2?: string | null
+          created_at?: string
+          id?: never
+          is_default?: boolean
+          label?: string | null
+          postal_code?: string
+          recipient_name?: string
+          recipient_phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artists: {
         Row: {
           created_at: string
@@ -385,6 +432,10 @@ export type Database = {
       }
       merge_cart: { Args: { p_items: Json }; Returns: undefined }
       pay_order: { Args: { p_order_id: string }; Returns: undefined }
+      set_default_address: {
+        Args: { p_address_id: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -119,6 +119,7 @@ DB_DESIGN.md 6장의 SQL을 아래 순서로 나눠서 커밋합니다.
 | `create_order` | `p_recipient_name`, `p_recipient_phone`, `p_address` | uuid (order_id) | NOT_AUTHENTICATED, CART_EMPTY, UNAVAILABLE_ITEM, PURCHASE_LIMIT_EXCEEDED |
 | `pay_order` | `p_order_id uuid` | void | NOT_AUTHENTICATED, INVALID_ORDER, PURCHASE_LIMIT_EXCEEDED, OUT_OF_STOCK |
 | `cancel_order` | `p_order_id uuid` | void | NOT_AUTHENTICATED, INVALID_ORDER, ALREADY_CANCELLED |
+| `set_default_address` | `p_address_id bigint` | void | NOT_AUTHENTICATED, INVALID_ADDRESS (→ 앱에서는 UNKNOWN) |
 
 Supabase Auth 에러는 `services/auth.ts`에서 아래 코드로 변환합니다 (RPC 아님).
 

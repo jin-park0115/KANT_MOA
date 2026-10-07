@@ -123,8 +123,14 @@ async function setQuantity(variantId: number, quantity: number, userId: string |
     if (error) throw toAppError(error);
     return;
   }
-  const guest = readGuest().filter((g) => g.variant_id !== variantId);
-  writeGuest([...guest, { variant_id: variantId, quantity }]);
+  // 이미 있으면 제자리에서 수량만 변경, 없으면 끝에 추가
+  const guest = readGuest();
+  const exists = guest.some((g) => g.variant_id === variantId);
+  writeGuest(
+    exists
+      ? guest.map((g) => (g.variant_id === variantId ? { ...g, quantity } : g))
+      : [...guest, { variant_id: variantId, quantity }],
+  );
 }
 
 export async function addToCart(variantId: number, quantity: number): Promise<Cart> {

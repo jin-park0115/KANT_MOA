@@ -45,6 +45,7 @@ erDiagram
     profiles ||--o{ cart_items : "장바구니"
     product_variants ||--o{ cart_items : "담김"
     profiles ||--o{ orders : "주문"
+    profiles ||--o{ addresses : "배송지"
     orders ||--|{ order_items : "포함"
     product_variants ||--o{ order_items : "주문됨"
 
@@ -124,6 +125,18 @@ erDiagram
         text option_name "스냅샷"
         int unit_price "스냅샷"
         int quantity
+    }
+    addresses {
+        bigint id PK
+        uuid user_id FK
+        text label "nullable"
+        text recipient_name
+        text recipient_phone
+        text postal_code
+        text address1
+        text address2 "nullable"
+        boolean is_default "사용자당 1개"
+        timestamptz created_at
     }
 ```
 
@@ -716,6 +729,19 @@ insert into public.product_variants (product_id, option_name, stock, max_per_use
 select p.id, '기본', 500, 1 from p;
 ```
 
+### 6-11. 배송지 (addresses)
+
+SQL 원본: `supabase/migrations/20261007000008_add_addresses.sql`
+
+| 항목 | 규칙 |
+|---|---|
+| 기본 배송지 | 사용자당 1개 (`unique (user_id) where is_default` 부분 유니크 인덱스) |
+| 첫 주소 | `before insert` 트리거가 자동으로 `is_default = true` |
+| 기본 배송지 삭제 | `after delete` 트리거가 남은 주소 중 최신을 기본으로 지정 |
+| 기본 변경 | `set_default_address(p_address_id)` RPC만 가능. 기존 해제 → 새로 지정 순서 (유니크 인덱스가 행 단위로 즉시 검사되므로) |
+| RLS | `addresses_own`: 본인 것만 CRUD. `is_default` 컬럼은 update 권한 회수 (RPC·트리거는 SECURITY DEFINER) |
+| 주문과의 관계 | FK 없음. 주문은 주소 문자열을 스냅샷으로 저장 |
+
 ---
 
 ## 7. 프론트 연동 참고
@@ -775,4 +801,4 @@ supabase gen types typescript --project-id <PROJECT_ID> > src/types/database.ts
 - 방치된 pending 주문 정리: 필요 시 pg_cron으로 일정 시간 지난 pending을 cancelled 처리
 - 실제 PG 연동 시: 결제 승인·웹훅을 Supabase Edge Function 또는 Next.js Route Handler로 추가하고, 그 안에서 `pay_order` 로직 호출
 - 관리자 기능이 필요해지면: `profiles.role` 컬럼 + `is_admin()` 함수를 추가하고 카탈로그 테이블에 관리자 쓰기 정책 추가
-- 확장 후보: 배송지(addresses), 찜(wishlist), 리뷰(reviews), 예약 판매 기간(`sale_start_at`, `sale_end_at`)
+- 확장 후보: 찜(wishlist), 리뷰(reviews), 예약 판매 기간(`sale_start_at`, `sale_end_at`)
