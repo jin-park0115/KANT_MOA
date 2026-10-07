@@ -1,34 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { LoginRequired } from "@/components/order/LoginRequired";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Button, Card, EmptyState, Input, SectionHeader, Skeleton } from "@/components/ui";
 import { getErrorCode, getErrorMessage } from "@/constants/error-messages";
 import { useCart } from "@/hooks/useCart";
-import { createOrder, getProfile, payOrder } from "@/mocks/orders";
+import { createOrder, payOrder } from "@/services/orders";
 
-type FormErrors = Partial<Record<"recipientName" | "recipientPhone" | "address", string>>;
+type Field = "recipientName" | "recipientPhone" | "address";
+type FormErrors = Partial<Record<Field, string>>;
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { profile, initialized } = useAuth();
   const { items, totalQuantity, totalPrice, loaded, refresh } = useCart();
-  const [form, setForm] = useState({ recipientName: "", recipientPhone: "", address: "" });
+  // 사용자가 고친 값만 담는다. 안 고친 칸은 프로필 값(이름·연락처)을 기본값으로 보여준다.
+  const [edited, setEdited] = useState<Partial<Record<Field, string>>>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 배송 정보 기본값: 프로필의 닉네임/연락처 (주소는 저장하지 않음)
-  useEffect(() => {
-    getProfile().then((profile) => {
-      if (profile) {
-        setForm((prev) => ({
-          ...prev,
-          recipientName: prev.recipientName || profile.nickname,
-          recipientPhone: prev.recipientPhone || (profile.phone ?? ""),
-        }));
-      }
-    });
-  }, []);
+  const form: Record<Field, string> = {
+    recipientName: edited.recipientName ?? profile?.nickname ?? "",
+    recipientPhone: edited.recipientPhone ?? profile?.phone ?? "",
+    address: edited.address ?? "",
+  };
 
   function validate(): FormErrors {
     const next: FormErrors = {};
@@ -65,17 +63,26 @@ export default function CheckoutPage() {
     } catch {
       // 결제가 실패하면 주문은 결제 대기로 남는다. 주문 상세에서 다시 결제하거나 취소할 수 있다.
     }
-    await refresh();
+    // 결제된 상품은 서버에서 장바구니에서 빠지므로 다시 불러온다.
+    await refresh().catch(() => {});
     router.push(`/orders/${orderId}`);
   }
 
-  const update = (field: keyof typeof form) => (event: { target: { value: string } }) =>
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const update = (field: Field) => (event: { target: { value: string } }) =>
+    setEdited((prev) => ({ ...prev, [field]: event.target.value }));
 
-  if (!loaded) {
+  if (!initialized || !loaded) {
     return (
       <div className="content-shell py-8 md:py-12">
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="content-shell py-8 md:py-12">
+        <LoginRequired next="/checkout" description="로그인하면 담아둔 상품이 그대로 장바구니에 남아 있어요." />
       </div>
     );
   }
@@ -128,7 +135,7 @@ export default function CheckoutPage() {
               <dd className="font-black">{totalPrice.toLocaleString("ko-KR")}원</dd>
             </div>
           </dl>
-          <p className="mt-3 text-xs text-muted">실제 결제는 이루어지지 않는 테스트 결제예요.</p>
+          <p className="mt-3 text-xs text-muted">실제 결제는 이루어지지 않는 테스트 결제예요. 최종 금액은 주문 시 서버에서 다시 계산돼요.</p>
           {submitError && <p role="alert" className="mt-4 text-sm text-danger">{submitError}</p>}
           <Button type="submit" fullWidth size="lg" className="mt-6" loading={submitting}>결제하기</Button>
         </Card>

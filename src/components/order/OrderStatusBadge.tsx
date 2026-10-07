@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui";
-import type { OrderStatus } from "@/mocks/orders";
+import type { OrderStatus } from "@/types/app";
 
 const STATUS: Record<OrderStatus, { label: string; className: string }> = {
   pending: { label: "결제 대기", className: "bg-amber-50 text-amber-700" },
