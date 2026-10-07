@@ -747,6 +747,11 @@ await supabase.rpc('cancel_order', { p_order_id: orderId });
 | `OUT_OF_STOCK` | pay_order | 결제 시점에 품절됨 (detail = variant_id) |
 | `INVALID_ORDER` | pay_order, cancel_order | 본인 주문이 아니거나 결제 불가 상태 |
 | `ALREADY_CANCELLED` | cancel_order | 이미 취소된 주문 |
+| `INVALID_CREDENTIALS` | signIn (Auth) | 이메일 또는 비밀번호 오류 |
+| `EMAIL_ALREADY_EXISTS` | signUp (Auth) | 이미 가입된 이메일 |
+| `WEAK_PASSWORD` | signUp (Auth) | 비밀번호 규칙 미달 |
+
+전체 에러 처리와 services 함수별 에러는 `docs/API_SPEC.md` 참고.
 
 ### DB 타입 생성
 

@@ -29,9 +29,9 @@
 
 | 담당 | 소유 영역 |
 |---|---|
-| 백엔드 | `supabase/` 전체, `src/lib/supabase/`, `src/services/`, `src/types/database.ts`, `docs/DB_DESIGN.md`, `docs/BACKEND.md` |
+| 백엔드 | `supabase/` 전체, `src/lib/supabase/`, `src/services/`, `src/proxy.ts`, `src/types/database.ts`, `src/types/app.ts`, `docs/DB_DESIGN.md`, `docs/BACKEND.md` |
 | 프론트엔드 | `src/app/`, `src/components/`, `src/hooks/`, `src/constants/`, `src/mocks/`, `public/`, 스타일 (사람별 세부 담당은 `docs/FRONTEND.md` 1장) |
-| 공동 | `docs/SETUP.md`, `src/types/` 중 database.ts 외 공용 타입 |
+| 공동 | `docs/SETUP.md`, `src/types/` 중 database.ts·app.ts 외 공용 타입 |
 
 다른 담당 영역의 파일은 수정하지 않습니다. 꼭 필요하면 먼저 담당자와 합의하고, PR 설명에 이유를 적고 해당 담당자를 리뷰어로 지정합니다.
 
@@ -60,16 +60,18 @@ KANT_MOA/
 │  │  └─ supabase/
 │  │     ├─ client.ts     # 브라우저용 클라이언트
 │  │     ├─ server.ts     # 서버 컴포넌트용 클라이언트 (cookies 사용)
-│  │     └─ middleware.ts # 세션 갱신 헬퍼
-│  ├─ services/           # Supabase 호출 래퍼 (프론트는 여기만 import)
+│  │     └─ proxy.ts      # 세션 갱신 헬퍼
+│  ├─ services/           # Supabase 호출 래퍼 (프론트는 여기만 import, 명세: docs/API_SPEC.md)
 │  │  ├─ storage.ts       # Storage 경로 → 공개 URL 변환
-│  │  ├─ products.ts
+│  │  ├─ products.ts      # 아티스트·카테고리·상품 조회
+│  │  ├─ auth.ts          # 회원가입·로그인·프로필
 │  │  ├─ cart.ts          # 서버 장바구니 + 비회원 장바구니 + 병합
 │  │  ├─ orders.ts
-│  │  └─ errors.ts        # RPC 에러 코드 → 앱 에러 변환
-│  └─ types/
-│     └─ database.ts      # supabase gen types 결과 (직접 수정 금지)
-├─ middleware.ts          # 세션 갱신 (Next.js 버전에 따라 proxy.ts)
+│  │  └─ errors.ts        # RPC·Auth 에러 코드 → 앱 에러 변환
+│  ├─ types/
+│  │  ├─ database.ts      # supabase gen types 결과 (직접 수정 금지)
+│  │  └─ app.ts           # services 반환 타입 (백엔드 작성, 프론트는 import만)
+│  └─ proxy.ts            # 세션 갱신 (Next.js 16부터 middleware → proxy)
 ├─ .env.example
 └─ .github/
    └─ pull_request_template.md
@@ -110,7 +112,7 @@ git push -u origin develop
 
 이미지 정책: 상품·아티스트 이미지는 Supabase Storage에서 불러오고, 로고·배너·아이콘 등 디자인 고정 이미지만 `public/`에 둡니다. `next/image`를 쓰려면 `next.config`의 `images.remotePatterns`에 `<PROJECT_REF>.supabase.co`의 `/storage/v1/object/public/**` 경로를 등록합니다.
 
-Supabase 클라이언트(`client.ts`, `server.ts`, `middleware.ts`) 코드는 Supabase 공식 문서의 "Next.js Server-Side Auth" 가이드를 기준으로 작성합니다. 패키지 버전에 따라 API가 달라질 수 있으므로 블로그 예제보다 공식 문서를 우선합니다.
+Supabase 클라이언트(`client.ts`, `server.ts`, `proxy.ts`) 코드는 Supabase 공식 문서의 "Next.js Server-Side Auth" 가이드를 기준으로 작성합니다. 패키지 버전에 따라 API가 달라질 수 있으므로 블로그 예제보다 공식 문서를 우선합니다.
 
 ## 6. 팀원 로컬 세팅
 
