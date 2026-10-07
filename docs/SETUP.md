@@ -38,7 +38,7 @@
 ## 4. 폴더 구조
 
 ```
-goods-shop/
+KANT_MOA/
 ├─ docs/
 │  ├─ SETUP.md            # 이 문서
 │  ├─ FRONTEND.md         # 프론트엔드 작업 규칙 (에이전트용)
@@ -115,8 +115,8 @@ Supabase 클라이언트(`client.ts`, `server.ts`, `middleware.ts`) 코드는 Su
 ## 6. 팀원 로컬 세팅
 
 ```bash
-git clone <REPO_URL>
-cd goods-shop
+git clone https://github.com/jin-park0115/KANT_MOA.git
+cd KANT_MOA
 git checkout develop
 npm install
 cp .env.example .env.local   # 값은 팀 채널에서 공유받기
