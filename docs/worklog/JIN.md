@@ -1,3 +1,32 @@
+## 2026-10-07 | 배송지(addresses) 추가 · 비회원 장바구니 순서 버그
+
+- 작업자: jin
+- 브랜치: dev/jin
+- 관련 이슈 / PR: sungho 요청 (마이페이지 배송 주소 관리) / -
+- 에이전트 사용: O (Claude Code)
+
+### 요청한 작업
+- addresses 테이블, services/addresses.ts, Address 타입, API_SPEC 반영
+- 비회원 장바구니 수량 변경 시 항목이 맨 아래로 내려가는 버그
+
+### 한 일
+- `supabase/migrations/20261007000008_add_addresses.sql` (테이블·RLS·트리거·set_default_address RPC) → db push (jin 실행)
+- `src/services/addresses.ts`, `src/types/app.ts` (Address, AddressInput), `src/types/database.ts` 재생성
+- `src/services/cart.ts` 비회원 setQuantity 제자리 수정
+- API_SPEC v1.1 (5-1장), DB_DESIGN (ERD, 6-11), BACKEND (RPC 목록)
+- 실제 DB 검증 13항목 통과 (자동 기본, 기본 변경, 기본 삭제 재지정, 남의 주소 차단, is_default 직접 수정 차단)
+
+### 결정 사항 / 이유
+- 첫 주소 자동 기본·기본 삭제 시 재지정은 services가 아닌 DB 트리거로 처리 (요청 중단돼도 기본 0개/2개 방지)
+- is_default 컬럼 update 권한 회수 → RPC로만 변경
+- set_default_address에서 해제 → 지정 순서 (부분 유니크 인덱스가 행 단위 즉시 검사)
+
+### 멈춘 지점 / 보고한 내용
+- 없음
+
+### 남은 일 / TODO
+- sungho 마이페이지·주문서 연동 후 브라우저 확인
+
 ## 2026-10-07 | 백엔드 B1~B6 (마이그레이션·seed·services)
 
 - 작업자: jin

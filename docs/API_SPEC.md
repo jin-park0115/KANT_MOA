@@ -3,7 +3,7 @@
 > 프론트가 호출하는 유일한 데이터 인터페이스는 `src/services/`입니다. 이 문서는 그 함수들의 입력·출력·에러를 정의합니다.
 > 별도 REST API는 없습니다. 내부적으로는 Supabase(`from().select()`, `rpc()`)를 호출합니다.
 > 스키마·RPC 원본은 `docs/DB_DESIGN.md`, 백엔드 규칙은 `docs/BACKEND.md`를 따릅니다.
-> 상태: **확정 (v1.0)** — 프론트 3명 리뷰 완료. 변경 시 이 문서를 먼저 고치고 PR에서 프론트 담당자를 리뷰어로 지정합니다.
+> 상태: **확정 (v1.1, 배송지 추가)** — 프론트 3명 리뷰 완료. 변경 시 이 문서를 먼저 고치고 PR에서 프론트 담당자를 리뷰어로 지정합니다.
 
 ## 0. 공통 규칙
 
@@ -189,6 +189,37 @@ type ProductQuery = {
 - 결제 성공 시 결제된 옵션만 장바구니에서 빠집니다.
 - 취소: `pending` → 상태만 변경, `paid` → 재고 복구. 버튼 노출 조건은 `status !== 'cancelled'`.
 
+## 5-1. 배송지 — `services/addresses.ts`
+
+```ts
+type Address = {
+  id: number;
+  label: string | null;          // '집', '회사'
+  recipientName: string;
+  recipientPhone: string;
+  postalCode: string;
+  address1: string;              // 기본주소
+  address2: string | null;       // 상세주소
+  isDefault: boolean;
+};
+type AddressInput = Omit<Address, 'id' | 'isDefault'> & { isDefault?: boolean };
+```
+
+| 함수 | 입력 | 반환 | 호출 위치 | 에러 |
+|---|---|---|---|---|
+| `getAddresses()` | - | `Address[]` (기본 배송지 맨 앞, 나머지 최신순) | 클라이언트 | `NOT_AUTHENTICATED` |
+| `createAddress(input)` | `AddressInput` | `Address` | 클라이언트 | `NOT_AUTHENTICATED` |
+| `updateAddress(id, input)` | `number, AddressInput` | `Address` | 클라이언트 | `NOT_AUTHENTICATED` |
+| `deleteAddress(id)` | `number` | `void` | 클라이언트 | `NOT_AUTHENTICATED` |
+| `setDefaultAddress(id)` | `number` | `void` | 클라이언트 | `NOT_AUTHENTICATED` |
+
+- 기본 배송지는 사용자당 항상 1개입니다 (주소가 1개 이상일 때).
+  - 첫 주소는 `isDefault`와 관계없이 자동으로 기본 배송지가 됩니다.
+  - 기본 배송지를 삭제하면 남은 주소 중 최신 주소가 기본이 됩니다.
+  - `isDefault: true`로 생성·수정하면 기존 기본 배송지는 자동 해제됩니다. `isDefault: false`는 무시합니다 (기본 해제는 다른 주소를 기본으로 지정해서).
+- 주문은 기존처럼 주소 문자열을 받습니다: `createOrder({ ..., address: \`${address1} ${address2 ?? ''}\`.trim() })`. 주소록을 고쳐도 지난 주문 배송지는 바뀌지 않습니다.
+- 남의 주소 id를 넘기면 수정·삭제는 아무 일도 일어나지 않고, `setDefaultAddress`/`updateAddress`는 `UNKNOWN` 에러를 던집니다 (화면에서 남의 id를 넘길 일은 없음).
+
 ## 6. 에러 코드 — `services/errors.ts`
 
 ```ts
@@ -200,7 +231,7 @@ class AppError extends Error {
 
 | 코드 | 발생 함수 | 화면 처리 |
 |---|---|---|
-| `NOT_AUTHENTICATED` | 주문·프로필 전체 | 로그인 페이지로 이동 (`?next=` 현재 경로) |
+| `NOT_AUTHENTICATED` | 주문·프로필·배송지 전체 | 로그인 페이지로 이동 (`?next=` 현재 경로) |
 | `CART_EMPTY` | createOrder | "장바구니가 비어 있어요" → 장바구니로 |
 | `UNAVAILABLE_ITEM` | createOrder, addToCart | 판매 중지·재고 부족 상품 포함 → 장바구니 확인 유도 |
 | `PURCHASE_LIMIT_EXCEEDED` | createOrder, payOrder, addToCart, updateQuantity | 옵션당 구매 한도 초과 (`detail` = variantId) |
@@ -225,14 +256,14 @@ class AppError extends Error {
 | 카테고리 `/category/[slug]` | chungman | `getCategories`, `getProducts({ categorySlug })` |
 | 상품 상세 `/products/[id]` | chungman | `getProduct`, `addToCart` (`useCart` 경유) |
 | 장바구니 | sungho | `getCart`, `updateQuantity`, `removeFromCart` |
-| 주문서 | sungho | `getCart`, `getProfile`, `createOrder`, `payOrder` |
+| 주문서 | sungho | `getCart`, `getProfile`, `getAddresses`, `createOrder`, `payOrder` |
 | 결제 완료 / 주문 상세 | sungho | `getOrder`, `payOrder`, `cancelOrder` |
 | 주문 내역 | sungho | `getOrders` |
-| 마이페이지 | sungho | `getProfile`, `updateProfile` |
+| 마이페이지 | sungho | `getProfile`, `updateProfile`, `getAddresses`, `createAddress`, `updateAddress`, `deleteAddress`, `setDefaultAddress` |
 
 ## 8. 결정된 기본 방침 (필요해지면 변경 요청)
 
 1. **`UNAVAILABLE_ITEM`의 detail**: 현재 RPC는 어떤 상품이 문제인지 알려주지 않습니다. 필요하면 `create_order`에 `detail = variant_id` 추가.
-2. **주문서 배송 정보 기본값**: `profiles.phone`만 있고 주소는 저장하지 않습니다. 주소 저장이 필요하면 배송지 테이블 추가 (현재 범위 밖).
+2. **주문서 배송 정보 기본값**: 기본 배송지(`getAddresses()[0]`)로 자동 입력. 주문에는 주소 문자열 스냅샷 저장 (5-1장).
 3. **목록 페이지네이션**: limit/offset 방식(더보기 버튼)으로 충분한지.
 4. **`sold_out` 표시**: `status`는 대시보드에서 수동 관리. 재고가 0이 되어도 자동 변경되지 않으므로 `isSoldOut`(재고 기반)을 화면 기준으로 사용.

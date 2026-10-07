@@ -119,3 +119,16 @@ export type Profile = {
 export type SignUpInput = { email: string; password: string; nickname: string };
 export type SignInInput = { email: string; password: string };
 export type UpdateProfileInput = { nickname?: string; phone?: string | null };
+
+export type Address = {
+  id: number;
+  label: string | null; // '집', '회사'
+  recipientName: string;
+  recipientPhone: string;
+  postalCode: string;
+  address1: string; // 기본주소
+  address2: string | null; // 상세주소
+  isDefault: boolean;
+};
+
+export type AddressInput = Omit<Address, 'id' | 'isDefault'> & { isDefault?: boolean };
