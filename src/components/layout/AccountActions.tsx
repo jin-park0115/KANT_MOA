@@ -29,7 +29,7 @@ export function AccountActions() {
 
   if (!profile) {
     return (
-      <Link href="/login" className="hidden h-10 items-center gap-1.5 rounded-full border border-line px-4 text-sm font-semibold transition-all hover:border-violet-300 hover:bg-gradient-to-r hover:from-teal-50 hover:via-violet-50 hover:to-pink-50 hover:text-violet-700 hover:shadow-sm sm:flex">
+      <Link href="/login" className="brand-gradient-soft-hover hidden h-10 items-center gap-1.5 rounded-full border border-line px-4 text-sm font-semibold hover:border-violet-300 sm:flex">
         <UserIcon className="size-[19px]" />
         로그인
       </Link>
@@ -38,10 +38,10 @@ export function AccountActions() {
 
   return (
     <div className="hidden items-center gap-1 sm:flex">
-      <Link href="/mypage" className="h-10 rounded-full px-3 text-sm font-bold leading-10 transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:via-violet-50 hover:to-pink-50 hover:text-violet-700 hover:shadow-sm">
+      <Link href="/mypage" className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-bold leading-10">
         {profile.nickname}
       </Link>
-      <button type="button" onClick={handleSignOut} disabled={loading} className="h-10 rounded-full px-3 text-sm font-semibold text-muted transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:via-violet-50 hover:to-pink-50 hover:text-violet-700 hover:shadow-sm disabled:cursor-wait">
+      <button type="button" onClick={handleSignOut} disabled={loading} className="brand-gradient-soft-hover h-10 rounded-full px-3 text-sm font-semibold text-muted disabled:cursor-wait">
         {loading ? "로그아웃 중" : "로그아웃"}
       </button>
     </div>

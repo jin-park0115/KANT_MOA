@@ -55,10 +55,12 @@ a { color: inherit; text-decoration: none; }
   color: white; font-size: 14px; font-weight: 700; transition: translate 150ms ease;
 }
 .skip-link:focus { translate: 0; }
-.brand-gradient-icon-hover {
+.brand-gradient-icon-hover,
+.brand-gradient-soft-hover {
   transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
-.brand-gradient-icon-hover:hover {
+.brand-gradient-icon-hover:hover,
+.brand-gradient-soft-hover:hover {
   background: linear-gradient(135deg, #e8f1f0, #edeaf4 52%, #f3e8ee);
   color: #514d5d;
   box-shadow: inset 0 0 0 1px rgb(153 128 210 / 14%), 0 5px 16px rgb(170 144 230 / 16%);
