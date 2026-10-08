@@ -1,3 +1,34 @@
+## 2026-10-08 | 메인 상단 배너·Recommended Artist·아티스트 검색 추가
+
+- 작업자: chungman
+- 브랜치: dev/chunga
+- 관련 이슈 / PR: 없음 / (PR 생성 예정)
+- 에이전트 사용: O (Claude, Cowork)
+
+### 요청한 작업
+- 메인 디자인을 위버스샵 메인처럼 변경 (상단 전체 폭 배너 → Recommended Artist → 아티스트별 굿즈)
+- 아티스트 검색 기능, 아티스트 로고 클릭 시 아티스트 굿즈 페이지로 이동
+
+### 한 일
+- 작업 전 develop 최신 상태(PR #24까지) 확인, 다른 브랜치와 겹치는 파일 없음 확인
+- `MainHeroCarousel.tsx`: 최신 상품 8개를 한 장씩 넘기는 전체 폭 배너 (상품 사진·아티스트·상품명·카테고리·가격, 좌우 화살표, `01 | 08` 표시, 클릭 시 상품 상세)
+- `ArtistPicker.tsx`: Recommended Artist 영역. 로고 클릭 시 `/artists/[slug]`, "아티스트" 버튼으로 검색 창(jina `Modal`·`Input` 사용) 열기, 이름·한글명·slug로 바로 필터링
+- `ArtistLogo.tsx`: 로고 타일 (로고가 없으면 테마 색 + 이름 첫 글자)
+- `src/app/(shop)/page.tsx`: 기존 검은 소개 박스를 상단 배너로 교체, 화면에 보이지 않는 h1 유지
+- `npx tsc --noEmit`, lint 통과
+
+### 결정 사항 / 이유
+- 아티스트 수가 적어(3팀) 검색은 서버 요청 없이 이미 받아온 `getArtists()` 결과를 브라우저에서 필터링
+- 상단 배너는 별도 배너 데이터가 없어 최신 상품(`getProducts({ limit: 8 })`)으로 구성, 실패 시 배너만 숨김
+- 검색 아이콘은 jina의 `SearchIcon`을 수정 없이 가져다 씀
+
+### 멈춘 지점 / 보고한 내용
+- 없음
+
+### 남은 일 / TODO
+- `npm run build`는 사람이 로컬에서 확인 (에이전트 환경은 Google Fonts 접속이 막혀 빌드 불가)
+- 아티스트 로고(`logo.webp`) 업로드 필요 (없으면 첫 글자 타일로 표시)
+
 ## 2026-10-07 | 아티스트 멤버 소개 페이지 추가
 
 - 작업자: chungman
