@@ -23,9 +23,23 @@ function readRecentlyViewed(): ProductSummary[] {
 
 export function RecentlyViewedTracker({ product }: { product: ProductSummary }) {
   useEffect(() => {
-    const current = readRecentlyViewed();
-    const next = [product, ...current.filter((item) => item.id !== product.id)].slice(0, MAX_ITEMS);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    try {
+      const current = readRecentlyViewed();
+      const summary: ProductSummary = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        status: product.status,
+        isSoldOut: product.isSoldOut,
+        thumbnailUrl: product.thumbnailUrl,
+        artist: product.artist,
+        category: product.category,
+      };
+      const next = [summary, ...current.filter((item) => item.id !== product.id)].slice(0, MAX_ITEMS);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // 저장소가 차거나 차단돼도 상품 상세 화면은 정상적으로 유지합니다.
+    }
   }, [product]);
 
   return null;
@@ -47,7 +61,7 @@ export function RecentlyViewedProducts() {
         <h2 id="recently-viewed-products" className="text-xl font-black md:text-2xl">최근 본 상품</h2>
         <p className="mt-1 text-sm text-muted">방금 둘러본 굿즈를 다시 확인해보세요.</p>
       </div>
-      <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-8">
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
         {products.slice(0, 4).map((product) => (
           <li key={product.id}>
             <ProductCard product={product} />
