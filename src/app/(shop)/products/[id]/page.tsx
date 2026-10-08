@@ -6,6 +6,7 @@ import { formatPrice } from "@/components/product/formatPrice";
 import { LoadError } from "@/components/product/LoadError";
 import { ProductImage } from "@/components/product/ProductImage";
 import { ProductPurchasePanel } from "@/components/product/ProductPurchasePanel";
+import { RecentlyViewedTracker } from "@/components/product/RecentlyViewedProducts";
 import { Badge, Skeleton } from "@/components/ui";
 import { getProduct } from "@/services/products";
 import type { ProductDetail } from "@/types/app";
@@ -40,6 +41,7 @@ async function ProductContent({ params }: ProductPageProps) {
   const altBase = `${product.artist.name} ${product.name}`;
   return (
     <>
+      <RecentlyViewedTracker product={product} />
       <nav aria-label="현재 위치" className="mb-5 flex items-center gap-1.5 text-xs font-semibold text-muted">
         <Link href={`/artists/${product.artist.slug}`} className="hover:text-foreground">{product.artist.name}</Link>
         <span aria-hidden="true">›</span>
