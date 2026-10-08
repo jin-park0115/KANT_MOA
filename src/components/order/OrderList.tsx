@@ -88,7 +88,7 @@ export function OrderList() {
                     selected ? "border-foreground bg-foreground text-white" : "brand-gradient-soft-hover border-line bg-white text-neutral-700 hover:border-violet-300"
                   }`}
                 >
-                  {item.label}
+                  <span className={selected ? "text-white" : undefined}>{item.label}</span>
                   <span className={selected ? "text-white/70" : "text-muted"}>{counts[item.value]}</span>
                 </Link>
               </li>
