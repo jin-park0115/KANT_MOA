@@ -71,7 +71,7 @@ export default function MyPage() {
             <p className="truncate text-lg font-black">{profile.nickname}</p>
             <p className="truncate text-sm text-muted">{profile.email}</p>
           </div>
-          <Button variant="outline" size="sm" loading={signingOut} onClick={handleSignOut}>로그아웃</Button>
+          <Button className="brand-gradient-soft-hover" variant="outline" size="sm" loading={signingOut} onClick={handleSignOut}>로그아웃</Button>
         </Card>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
@@ -83,9 +83,9 @@ export default function MyPage() {
                 {section.items.map((item) => (
                   <li key={item.label}>
                     {item.href ? (
-                      <Link href={item.href} className="flex min-h-14 items-center justify-between gap-4 px-5 font-bold transition-colors hover:bg-neutral-50">
+                      <Link href={item.href} className="brand-gradient-soft-hover group flex min-h-14 items-center justify-between gap-4 px-5 font-bold">
                         {item.label}
-                        <span aria-hidden="true" className="text-muted">›</span>
+                        <span aria-hidden="true" className="text-muted transition-transform group-hover:translate-x-1">›</span>
                       </Link>
                     ) : (
                       <div aria-disabled="true" className="flex min-h-14 items-center justify-between gap-4 px-5 font-bold text-muted">
