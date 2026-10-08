@@ -65,7 +65,7 @@ export function ArtistBannerCarousel({ banners, themeStyle }: ArtistBannerCarous
 
 function BannerCard({ banner }: { banner: ArtistBanner }) {
   return (
-    <Link href={banner.href} className="group relative isolate flex aspect-video items-end overflow-hidden rounded-lg bg-linear-to-br from-(--artist-color) to-foreground p-6 text-white md:p-8">
+    <Link href={banner.href} className="group relative isolate flex aspect-video items-end overflow-hidden rounded-lg bg-linear-to-br from-(--artist-color) to-foreground p-6 md:p-8">
       {banner.imageUrl && banner.variant === "cover" && (
         <Image src={banner.imageUrl} alt={banner.imageAlt} fill sizes="(min-width: 768px) 50vw, 100vw" loading="eager" className="-z-10 object-cover" />
       )}
@@ -75,7 +75,7 @@ function BannerCard({ banner }: { banner: ArtistBanner }) {
         </div>
       )}
       <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/60 via-black/10 to-transparent" aria-hidden="true" />
-      <div className="w-3/5">
+      <div className="w-3/5 text-white">
         <h2 className="text-xl font-black leading-snug md:text-2xl">{banner.title}</h2>
         <p className="mt-1.5 text-sm opacity-90">{banner.subtitle}</p>
       </div>

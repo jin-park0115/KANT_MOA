@@ -7,7 +7,7 @@ import { formatPrice } from "./formatPrice";
 
 const FEATURED_LIMIT = 3;
 
-// 배너 1: 아티스트 대표 이미지, 배너 2~: 최신 상품 (별도 배너 테이블 없이 기존 데이터로 구성)
+// 배너 1: 아티스트 단체 사진(클릭 시 멤버 소개 페이지), 배너 2~: 최신 상품 (별도 배너 테이블 없이 기존 데이터로 구성)
 export async function ArtistBanners({ artist }: { artist: Artist }) {
   let featured: ProductSummary[] = [];
   try {
@@ -19,11 +19,11 @@ export async function ArtistBanners({ artist }: { artist: Artist }) {
   const banners: ArtistBanner[] = [
     {
       key: "artist",
-      href: "#artist-products",
+      href: `/artists/${artist.slug}/about`,
       title: artist.name,
-      subtitle: `${artist.nameKo} 공식 굿즈를 만나보세요!`,
+      subtitle: `${artist.nameKo} 멤버 소개 보기 ›`,
       imageUrl: artist.heroImageUrl,
-      imageAlt: `${artist.name} 대표 이미지`,
+      imageAlt: `${artist.name} 단체 사진`,
       variant: "cover",
     },
     ...featured.map<ArtistBanner>((product) => ({

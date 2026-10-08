@@ -32,6 +32,20 @@ type Artist = {
   themeColor: string | null;
 };
 
+type ArtistMember = {
+  id: number;
+  name: string;          // '선우' (상품 옵션명과 동일)
+  nameEn: string;        // 'SUNWOO'
+  position: string | null;
+  color: string | null;  // 멤버 컬러 '#FF8A3D'
+  mascot: string | null;
+  birthday: string | null;       // 'YYYY-MM-DD'
+  mbti: string | null;
+  description: string | null;    // 한 줄 소개
+  tags: string[];                // 해시태그 ('#' 없이)
+  imageUrl: string | null;       // 정사각형 1080×1080
+};
+
 type Category = {
   id: number;
   name: string;          // '앨범'
@@ -123,6 +137,7 @@ type Profile = {
 |---|---|---|---|---|
 | `getArtists()` | - | `Artist[]` (sort_order 순) | 서버 | - |
 | `getArtist(slug)` | `string` | `Artist \| null` | 서버 | - |
+| `getArtistMembers(slug)` | `string` | `ArtistMember[]` (sort_order 순, 없는 slug면 빈 배열) | 서버 | - |
 | `getCategories()` | - | `Category[]` (sort_order 순, 7개) | 서버 | - |
 | `getProducts(params?)` | `ProductQuery` | `{ items: ProductSummary[]; total: number }` | 서버 | - |
 | `getProduct(id)` | `number` | `ProductDetail \| null` | 서버 | - |
@@ -252,7 +267,7 @@ class AppError extends Error {
 | 공통 헤더 | jina | `getProfile`, `onAuthChange`, `getCart().totalQuantity`, `getArtists`, `getCategories` |
 | 로그인 / 회원가입 | jina | `signIn`, `signUp` |
 | 메인 | chungman | `getArtists`, `getProducts` |
-| 아티스트 `/artists/[slug]` | chungman | `getArtist`, `getProducts({ artistSlug })` |
+| 아티스트 `/artists/[slug]` | chungman | `getArtist`, `getArtistMembers`, `getProducts({ artistSlug })` |
 | 카테고리 `/category/[slug]` | chungman | `getCategories`, `getProducts({ categorySlug })` |
 | 상품 상세 `/products/[id]` | chungman | `getProduct`, `addToCart` (`useCart` 경유) |
 | 장바구니 | sungho | `getCart`, `updateQuantity`, `removeFromCart` |

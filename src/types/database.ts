@@ -86,6 +86,62 @@ export type Database = {
           },
         ]
       }
+      artist_members: {
+        Row: {
+          artist_id: number
+          birthday: string | null
+          color: string | null
+          description: string | null
+          id: number
+          image_path: string | null
+          mascot: string | null
+          mbti: string | null
+          name: string
+          name_en: string
+          position: string | null
+          sort_order: number
+          tags: string[]
+        }
+        Insert: {
+          artist_id: number
+          birthday?: string | null
+          color?: string | null
+          description?: string | null
+          id?: never
+          image_path?: string | null
+          mascot?: string | null
+          mbti?: string | null
+          name: string
+          name_en: string
+          position?: string | null
+          sort_order?: number
+          tags?: string[]
+        }
+        Update: {
+          artist_id?: number
+          birthday?: string | null
+          color?: string | null
+          description?: string | null
+          id?: never
+          image_path?: string | null
+          mascot?: string | null
+          mbti?: string | null
+          name?: string
+          name_en?: string
+          position?: string | null
+          sort_order?: number
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_members_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artists: {
         Row: {
           created_at: string

@@ -2,6 +2,7 @@ import { publicClient as supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
 import type {
   Artist,
+  ArtistMember,
   Category,
   ProductDetail,
   ProductList,
@@ -34,6 +35,29 @@ export async function getArtist(slug: string): Promise<Artist | null> {
   const { data, error } = await supabase.from('artists').select('*').eq('slug', slug).maybeSingle();
   if (error) throw toAppError(error);
   return data && toArtist(data);
+}
+
+// 없는 slug면 빈 배열
+export async function getArtistMembers(slug: string): Promise<ArtistMember[]> {
+  const { data, error } = await supabase
+    .from('artist_members')
+    .select('*, artists!inner(slug)')
+    .eq('artists.slug', slug)
+    .order('sort_order');
+  if (error) throw toAppError(error);
+  return data.map((m) => ({
+    id: m.id,
+    name: m.name,
+    nameEn: m.name_en,
+    position: m.position,
+    color: m.color,
+    mascot: m.mascot,
+    birthday: m.birthday,
+    mbti: m.mbti,
+    description: m.description,
+    tags: m.tags,
+    imageUrl: getImageUrl('artists', m.image_path),
+  }));
 }
 
 export async function getCategories(): Promise<Category[]> {

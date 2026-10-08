@@ -23,13 +23,13 @@ export async function ArtistShowcase({ artist }: { artist: Artist }) {
       <Link
         href={`/artists/${artist.slug}`}
         style={artistThemeStyle(artist.themeColor)}
-        className="group relative isolate flex h-24 items-end bg-linear-to-r from-(--artist-color) to-foreground px-5 pb-4 text-white md:h-28 md:px-6"
+        className="group relative isolate flex h-24 items-end bg-linear-to-r from-(--artist-color) to-foreground px-5 pb-4 md:h-28 md:px-6"
       >
         {artist.heroImageUrl && (
           <Image src={artist.heroImageUrl} alt="" fill sizes="(min-width: 1200px) 1200px, 100vw" className="-z-10 object-cover object-center" />
         )}
         <div className="absolute inset-0 -z-10 bg-linear-to-r from-black/60 via-black/30 to-transparent" aria-hidden="true" />
-        <div>
+        <div className="text-white">
           <span className="rounded bg-black/60 px-1.5 py-0.5 text-xs font-bold">Now</span>
           <h2 className="mt-1.5 flex items-center gap-1 text-2xl font-black tracking-tight md:text-3xl">
             {artist.name}

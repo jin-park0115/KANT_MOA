@@ -17,9 +17,9 @@ export function SortTabs({ basePath, current }: SortTabsProps) {
             href={buildListHref(basePath, option.value)}
             scroll={false}
             aria-current={active ? "true" : undefined}
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-foreground text-white" : "text-muted hover:text-foreground"}`}
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-foreground" : ""}`}
           >
-            {option.label}
+            <span className={active ? "text-white" : "text-muted hover:text-foreground"}>{option.label}</span>
           </Link>
         );
       })}

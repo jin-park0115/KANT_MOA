@@ -39,7 +39,7 @@ export default function CartPage() {
         <EmptyState
           title="장바구니가 비어 있어요"
           description="마음에 드는 굿즈를 담아보세요."
-          action={<Link href="/category/all"><Button>상품 보러가기</Button></Link>}
+          action={<Link href="/"><Button>상품 보러가기</Button></Link>}
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
