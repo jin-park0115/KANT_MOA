@@ -3,8 +3,8 @@ import { ArtistPicker } from "@/components/product/ArtistPicker";
 import { ArtistShowcase, ArtistShowcaseSkeleton } from "@/components/product/ArtistShowcase";
 import { LoadError } from "@/components/product/LoadError";
 import { MainHeroCarousel } from "@/components/product/MainHeroCarousel";
-import { ProductGrid, ProductGridSkeleton } from "@/components/product/ProductGrid";
-import { EmptyState, SectionHeader, Skeleton } from "@/components/ui";
+import { RecentlyViewedProducts } from "@/components/product/RecentlyViewedProducts";
+import { EmptyState, Skeleton } from "@/components/ui";
 import { getArtists, getProducts } from "@/services/products";
 import type { Artist, ProductSummary } from "@/types/app";
 
@@ -29,12 +29,7 @@ export default function HomePage() {
           </Suspense>
         </section>
 
-        <section aria-label="새로 나온 굿즈" className="pt-6">
-          <SectionHeader title="새로 나온 굿즈" />
-          <Suspense fallback={<ProductGridSkeleton />}>
-            <NewProducts />
-          </Suspense>
-        </section>
+        <RecentlyViewedProducts />
       </div>
     </>
   );
@@ -79,14 +74,4 @@ async function ArtistShowcases() {
       ))}
     </div>
   );
-}
-
-async function NewProducts() {
-  let products: ProductSummary[];
-  try {
-    products = (await getProducts({ limit: 8 })).items;
-  } catch (error) {
-    return <LoadError error={error} retryHref="/" />;
-  }
-  return <ProductGrid products={products} />;
 }
