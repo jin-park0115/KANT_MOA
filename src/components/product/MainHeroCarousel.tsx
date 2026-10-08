@@ -20,11 +20,12 @@ interface MainHeroCarouselProps {
 // 같은 색상(hue)끼리 oklab으로 섞어 중간이 회색·갈색으로 탁해지지 않게 한다.
 // 번지는 폭(--edge)은 화면 폭에 따라 li의 클래스에서 정한다 (모바일은 좁게, 글자를 덮지 않도록).
 function slideBackground(color: string): CSSProperties {
-  // 파스텔은 채도가 낮아 그대로 어둡게 하면 갈색빛이 돼서 채도를 올리되, 너무 튀지 않게 상한을 둔다
-  const deep = `oklch(from ${color} 0.34 min(calc(c * 2.2), 0.15) h)`;
+  // 파스텔은 채도가 낮아 그대로 어둡게 하면 갈색빛이 돼서 채도를 조금 올리되, 부드럽게 보이도록 밝기는 중간·채도 상한은 낮게 둔다
+  // (밝기 0.48이면 흰 글자 명도 대비 약 6:1로 읽기에 충분)
+  const deep = `oklch(from ${color} 0.48 min(calc(c * 1.6), 0.1) h)`;
   return {
     // relative color를 지원하지 않는 브라우저용 단색 대체
-    backgroundColor: `color-mix(in oklab, ${color} 30%, ${BASE_COLOR})`,
+    backgroundColor: `color-mix(in oklab, ${color} 45%, ${BASE_COLOR})`,
     backgroundImage: `linear-gradient(90deg in oklab, ${color} 0%, ${deep} var(--edge), ${deep} calc(100% - var(--edge)), ${color} 100%)`,
   };
 }
