@@ -78,7 +78,7 @@ export default function MyPage() {
         {MENU.map((section) => (
           <section key={section.title} aria-labelledby={`menu-${section.title}`}>
             <h2 id={`menu-${section.title}`} className="mb-2 px-1 text-sm font-bold text-muted">{section.title}</h2>
-            <Card>
+            <Card className="overflow-hidden">
               <ul className="divide-y divide-line">
                 {section.items.map((item) => (
                   <li key={item.label}>
