@@ -85,7 +85,7 @@ export function OrderList() {
                   scroll={false}
                   aria-current={selected ? "page" : undefined}
                   className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-bold transition-colors ${
-                    selected ? "border-foreground bg-foreground text-white" : "border-line bg-white text-neutral-700 hover:border-neutral-400"
+                    selected ? "border-foreground bg-foreground text-white" : "brand-gradient-soft-hover border-line bg-white text-neutral-700 hover:border-violet-300"
                   }`}
                 >
                   {item.label}
@@ -111,7 +111,7 @@ export function OrderList() {
             return (
               <li key={order.id}>
                 <Link href={`/orders/${order.id}`}>
-                  <Card className={`flex items-center justify-between gap-4 p-5 transition-shadow hover:shadow-lg ${dimmed ? "opacity-60" : ""}`}>
+                  <Card className={`brand-gradient-soft-hover flex items-center justify-between gap-4 p-5 ${dimmed ? "opacity-60" : ""}`}>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <OrderStatusBadge status={order.status} />

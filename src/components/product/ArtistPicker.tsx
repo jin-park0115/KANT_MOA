@@ -76,7 +76,7 @@ export function ArtistPicker({ artists }: { artists: Artist[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-4 flex h-11 w-full items-center gap-2 rounded-full border border-line bg-white px-4 text-left text-sm text-muted transition-colors hover:border-neutral-400 md:mt-5"
+        className="brand-gradient-soft-hover mt-4 flex h-11 w-full items-center gap-2 rounded-full border border-line bg-white px-4 text-left text-sm text-muted hover:border-violet-300 md:mt-5"
       >
         <SearchIcon className="size-4 text-foreground" />
         아티스트를 검색해보세요.
@@ -97,7 +97,7 @@ export function ArtistPicker({ artists }: { artists: Artist[] }) {
           <ul className="mt-4 max-h-80 divide-y divide-line overflow-y-auto">
             {results.map((artist) => (
               <li key={artist.id}>
-                <Link href={`/artists/${artist.slug}`} onClick={handleClose} className="flex items-center gap-3 py-3 hover:bg-neutral-50">
+                <Link href={`/artists/${artist.slug}`} onClick={handleClose} className="brand-gradient-soft-hover flex items-center gap-3 rounded-md px-2 py-3">
                   <ArtistLogo artist={artist} size="sm" />
                   <span className="text-foreground">
                     <span className="block text-sm font-bold">{artist.name}</span>
