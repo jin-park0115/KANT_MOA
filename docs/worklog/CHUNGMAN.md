@@ -1,3 +1,34 @@
+## 2026-10-13 | 오늘 작업 요약 (chungman)
+
+- 작업자: chungman
+- 브랜치: dev/chunga
+- 관련 PR: #153(컴포넌트 폴더 정리), #159(formatPrice·PageTitle·주문서 분리), #163(전체 상품·상품 404), 좋아요·공유·검색 PR(올릴 예정)
+- 에이전트 사용: O (Claude, Cowork)
+
+### 한 일 (자세한 내용은 아래 각 기록)
+- 코드 리뷰: 팀 노션(설계·컨벤션·API 명세)과 코드를 대조해 컴포넌트 구조·백엔드 설계 의도 정리, 개선 항목 목록화
+- 리팩터링
+  - `components/product/`를 `home/`·`artist/`·`product/`로 분리, 안 쓰는 `MainHeroCarousel`·`heroSlides` 삭제 (#153)
+  - `formatPrice` → `src/lib/`, 가격 표시를 `formatPrice`로 통일. `PageTitle` → `components/ui`. `checkout/page.tsx` 302줄 → 199줄 (#159)
+- 이슈 해결: #93 `/products` 전체 상품 목록(카테고리 탭 "전체" 추가, 더 보기 최대 500개), #94 상품 없음 404 (#163)
+- 새 기능
+  - 상품 좋아요: 상세 하트, 최근 본 상품 페이지를 "내 상품"(최근 본 상품·좋아요 탭)으로, 좋아요만 있어도 오른쪽 아래 버튼 표시
+  - 아티스트 좋아요: 아티스트 페이지 버튼, 메인 배너·Recommended Artist·아티스트별 굿즈 패널을 좋아요 많은 순으로 (JIN #167 백엔드 연결)
+  - 상품 공유 버튼(휴대폰 공유 창 / 컴퓨터 링크 복사), 상품 검색 `/search` + 상단 검색 아이콘
+- 충돌 해결: develop 병합 시 `HomeSpotlight.tsx`(성호 수정 ↔ 폴더 이동), `artists/page.tsx`(진 artists.ts 분리 ↔ import 통합) 두 번, 양쪽 변경 모두 유지
+- 발표 준비: 10분 발표 자료(pptx 10장)·멘트(docx) 작성, 메인 화면 최신 캡처 교체
+- 확인: 매 작업 eslint·tsc, Windows `npm run build` 통과, localhost에서 화면 직접 확인
+
+### 멈춘 지점 / 보고한 내용
+- 다른 사람 영역 수정(사용자 승인): sungho(장바구니·주문·마이페이지), jina(`components/ui`, `layout/TopBar.tsx` 검색 아이콘) → 공유 필요
+- 아티스트 좋아요 DB는 JIN에게 요청 → #167로 반영 후 목 데이터 제거
+
+### 남은 일 / TODO
+- 좋아요·공유·검색 PR 올리기 (제목: `feat: 상품·아티스트 좋아요, 상품 공유, 상품 검색 추가`)
+- 이미지 최종화 이슈 #50·#86·#87·#88 (최종 이미지 확보 + Storage 업로드 필요)
+- 상품 카드에도 좋아요 하트를 보일지 팀과 결정
+- 이미지 로딩 속도·반응형 점검 (발표 자료 개선 항목)
+
 ## 2026-10-13 | dev/chunga: 아티스트 좋아요 목 데이터 → 실제 DB 연결
 
 - 작업자: chungman
@@ -14,7 +45,7 @@
 
 ### 남은 일 / TODO
 - 지금은 모든 아티스트 좋아요가 0이라 메인 순서는 원래 순서와 같음
-- Windows `npm run build`
+- (완료) Windows `npm run build` 통과 (25페이지)
 
 ## 2026-10-13 | dev/chunga: 상품·아티스트 좋아요, 상품 공유, 상품 검색
 
