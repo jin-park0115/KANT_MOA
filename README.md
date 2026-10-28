@@ -1,5 +1,83 @@
 # KANT MOA — 아이돌 공식 굿즈샵
 
+## 프로젝트(2) 현재 작업 안내 (2026-10-23)
+
+- 현재 팀: 희주(P1 공통·인증·회원), 상재(P2 상품·카탈로그·좋아요·이관), 여름(P3 장바구니·배송지·주문), 충만(P4 관리자).
+- 확정 방향: Supabase를 Docker PostgreSQL + FastAPI + 로컬 이미지 저장으로 대체합니다.
+- [프로젝트2 설계·역할·공통 API 계약·실행 안내](docs/PROJECT2.md)를 현재 개발 기준으로 사용합니다.
+- **PR 올리기 전 필독: [PR 가이드](docs/PR_GUIDE.md)** — clone마다 한 번 `git config core.hooksPath .githooks`, push 전 자동 검사(CI와 같은 조건), PR → CI(frontend·backend) 통과 → 머지 순서. main은 브랜치 보호로 CI 통과 전 머지 불가.
+- [희주 작업일지](docs/worklog/HEEJU.md). GitHub 문서를 원본으로 유지하고 팀 Notion·Redmine에 연결합니다.
+- 현재 추가된 범위는 공통 실행 기반입니다. 인증·상품·주문·관리자 API와 프론트 이전은 아직 완료되지 않았습니다.
+
+### 미이전 화면
+
+현재 기존 Next.js 화면 전체가 FastAPI 미이전 상태입니다: 로그인·회원가입·내 정보, 메인·상품·검색·아티스트·카테고리·공지·좋아요, 최근 본 상품·챗봇. 관리자 화면은 신규 개발 예정입니다. (장바구니·배송지·주문·결제·취소는 FastAPI로 전환했습니다 → 아래 P3 절)
+
+팀 결정에 따라 최종 로컬 서비스에서는 미이전 화면을 숨겨야 합니다. **현재 숨김 처리는 미구현**이며 기존 코드는 Supabase에 의존합니다. 백엔드 실행만으로 프론트가 전환되지는 않습니다.
+
+### P3 장바구니·배송지·주문 (여름)
+
+**FastAPI 담당 범위** — `backend/src/orders/` 4계층 (presentation → application → domain ← infrastructure)
+
+| Use Case | API | 주요 규칙 |
+| --- | --- | --- |
+| 배송지 | `GET·POST /addresses`, `GET·PUT·DELETE /addresses/{id}`, `PATCH /addresses/{id}/default` | 첫 주소 자동 기본, 기본은 1개, 기본 삭제 시 최신 주소가 기본, 남의 배송지 403 |
+| 장바구니 | `GET /cart`, `POST /cart/items`, `PATCH·DELETE /cart/items/{variant_id}`, `POST /cart/merge`, `POST /cart/preview`(비로그인) | 같은 옵션은 수량 합산, 판매 중·재고·1인 구매 제한 안내 검사, 비회원 병합 상한 min(재고, 구매 제한) |
+| 주문·모의 결제·취소 | `GET·POST /orders`, `POST /orders/direct`, `GET /orders/{id}`, `POST /orders/{id}/pay`, `POST /orders/{id}/cancel`, `GET /orders/shipping-policy`(비로그인) | 주문 생성은 재고 그대로, 결제 시 users → orders → 옵션 id 오름차순 `FOR UPDATE` 후 P2 `decrease_stock`, 결제된 옵션만 장바구니에서 제거, paid 취소 시 `increase_stock`, 실패 시 전체 rollback |
+
+- 상태 전이: `pending → paid`, `pending → cancelled`, `paid → cancelled`만 허용 (`domain/order_status.py`).
+- 오류: 422 입력 / 401 미인증·블랙리스트 토큰 / 403 남의 데이터 / 404 없음 / 409 업무 규칙(`OUT_OF_STOCK`·`PURCHASE_LIMIT_EXCEEDED`·`INVALID_ORDER`·`ALREADY_CANCELLED`·`CART_EMPTY`·`UNAVAILABLE_ITEM`). 본문은 `{code, message}`.
+- 목록: `GET /orders`(상태·상품명 검색·페이지), `GET /addresses`(검색·페이지) → `{items, total, page, size}`.
+
+**Supabase → FastAPI 대체 목록 (프론트)**
+
+| 기존 Supabase 호출 | 지금 |
+| --- | --- |
+| `cart_items` 테이블, `merge_cart` RPC, 비회원 장바구니의 `product_variants` 조회 | `src/services/cart.ts` → `/cart`·`/cart/merge`·`/cart/preview` |
+| `create_order`·`create_direct_order`·`pay_order`·`cancel_order` RPC, `orders` 조회 | `src/services/orders.ts` → `/orders/...` |
+| `addresses` 테이블, `set_default_address` RPC | `src/services/addresses.ts` → `/addresses/...` |
+| 배송비 표시용 `shop_settings` 조회 | `useShippingFee` → `/orders/shipping-policy` (푸터 회사 정보는 아직 `settings.ts`) |
+
+공통 호출부는 `src/services/api.ts`이고, 토큰은 localStorage `kantmoa.accessToken`(관리자 화면과 같은 키)에서 읽습니다. 프론트 로그인은 `src/services/session.ts`로 이 키에 토큰을 저장합니다 ([#66](https://github.com/hiju200208-png/KANT_MOA_develop/pull/66)).
+
+**검증** — 실행 방법과 안전 수칙: [P3 테스트 전략](docs/TEST_STRATEGY_P3.md) · 결과 기록: [여름 작업일지](docs/worklog/YEOREUM.md)
+
+- 자동 테스트: `tests/orders` 221 passed (실제 PostgreSQL 동시 결제·rollback 포함), GitHub CI `backend`·`frontend` 통과
+- 실제 토큰 API E2E 25/25, 프론트 서비스 ↔ FastAPI 31/31
+- 화면 E2E (로그인 전환 적용 상태, main은 #66): 로그인 → 비회원 장바구니 병합 → 수량 변경 → 주문서 결제 → 새로고침 → 취소(재고 복구) → 구매 제한 오류 표시 → 로그아웃 후 같은 토큰 401. DB 전 → 후 값은 작업일지에 기록
+
+**미완료·주의**: 회원가입·내 정보 수정 화면은 아직 Supabase(P1). 상품 상세 화면(P2)이 FastAPI로 바뀌기 전에는 화면에서 상품을 담는 경로 대신 비회원 장바구니·바로 구매 주소(`/checkout?variant=&qty=`)로 확인합니다. 결제는 모의 결제입니다.
+
+### P4 관리자 (충만)
+
+**FastAPI 담당 범위** — `backend/src/admin/` 4계층 (presentation → application → domain ← infrastructure). 라우터 전체에 P1 `require_admin`이 걸려 있습니다(토큰 없음 401, 일반 회원 403).
+
+| Use Case | API | 주요 규칙 |
+| --- | --- | --- |
+| 대시보드 | `GET /admin/dashboard` | 전체·판매중·품절·숨김·재고 없음·재고 부족(옵션 5개 이하) 집계, 목록 필터와 같은 기준 |
+| 상품 조회 | `GET /admin/products`, `GET /admin/products/{id}` | 숨김 상품 포함, 검색·필터·정렬(최신/재고 적은 순/이름)·페이지, 옵션별 재고 |
+| 판매 상태 | `PATCH /admin/products/{id}`, `POST /admin/products/bulk-status` | on_sale·sold_out·hidden. 일괄은 1~100개, 없는 상품이 섞이면 404 + 전부 rollback |
+| 재고 조정 | `POST /admin/products/{pid}/variants/{vid}/stock-adjustments` | 증감 방식(-10000~10000), 재고 규칙·잠금은 P2 함수 한 곳(부족 409, 잘못된 값 422) |
+| 대표 이미지 | `PUT /admin/products/{id}/thumbnail` | jpeg·png·webp, 5MB, 파일 시그니처 검사 |
+| 공지 | `GET·POST /admin/notices`, `GET·PATCH·DELETE /admin/notices/{id}` | 등록 201, 삭제 204, 없는 아티스트 422 |
+
+**관리자 화면** — `/admin/login`(P1 `/auth/login`·`/auth/me`, ADMIN만 입장) · `/admin`(대시보드) · `/admin/products`(목록·필터·일괄 상태 변경) · `/admin/products/[id]`(상태·재고·이미지) · `/admin/notices`. 호출부는 `src/services/admin/`, 토큰은 공용 `src/services/session.ts`(localStorage `kantmoa.accessToken`)를 씁니다.
+
+**사용 방법**
+
+1. 관리자 계정: `backend/.env`에 `JWT_SECRET`을 넣고 `cd backend && uv run --no-sync python scripts/create_admin.py` (비밀번호는 입력창에 직접 입력)
+2. 서버: `uv run --no-sync uvicorn main:app --app-dir src --host 127.0.0.1 --port 8000`, 프론트: `npm run dev`
+3. `http://localhost:3000/admin/login`에서 로그인 → 대시보드 카드로 상품 목록 이동
+
+**검증** — 설계·규칙·검증표: [P4 설계 문서](docs/admin/P4_ADMIN.md) · 시연 순서: [P4 발표자료](docs/presentation/P4_CHUNGMAN.md) · 기록: [충만 작업일지](docs/worklog/CHUNGMAN.md)
+
+- 실제 P1 토큰으로 확인(로컬 DB, DB 전→후): 토큰 없음 401 / 일반 회원 403 / 관리자 200, 일괄 숨김 on_sale 2 → hidden 2, 없는 상품 포함 일괄 변경 404 후 상태 그대로, 재고 12 → 17 · -1000 요청 409 후 17 그대로, 공지 0 → 1 → 0, 로그아웃 후 같은 토큰 401(블랙리스트 1행)
+- 자동 테스트: 백엔드 pytest(관리자 도메인·서비스·API·로컬 DB 통합 포함), 프론트 typecheck·lint·test, GitHub CI `backend`·`frontend` 통과 (PR #50, #62)
+
+**미완료·주의**: 사용자 화면 공지 노출은 P2 공개 공지 API 전환 후 확인합니다(이슈 #40 마지막 항목). 재고 변경 이력 조회는 미구현(선택 기능)입니다.
+
+아래 본문과 기존 `docs/SETUP.md`, `docs/BACKEND.md`, `docs/DB_DESIGN.md`는 프로젝트1 인수 자료입니다. 프로젝트2의 역할·DB·브랜치·재고 규칙은 위 문서를 우선합니다. 기존 저작권 고지는 유지합니다.
+
 > 아이돌 11팀의 굿즈를 한곳에서 모아 보는 온라인 굿즈샵입니다. 가상 그룹 3팀 **ORBIT:ON(오르빗온) · DAYLOG(데이로그) · SODA FM(소다에프엠)** 과, 시연용으로 넣은 실제 아티스트 8팀(CORTIS · ZICO · BTS · SEVENTEEN · LE SSERAFIM · TOMORROW X TOGETHER · TWS · BOYNEXTDOOR)의 상품을 다룹니다.
 > 팬이 메인에서 아티스트와 신상품을 둘러보고, 카테고리·아티스트별 목록에서 상품을 찾고, 상세 페이지에서 옵션(멤버·버전·사이즈)을 골라 장바구니에 담거나 바로 구매하는 흐름을 구현했습니다.
 

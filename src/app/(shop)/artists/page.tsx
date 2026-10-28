@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { io } from "next/cache";
 import { EmptyState, PageTitle, Skeleton } from "@/components/ui";
 import { artistThemeStyle } from "@/components/artist/artistTheme";
 import { LoadError } from "@/components/product/LoadError";
@@ -23,6 +24,7 @@ export default function ArtistsPage() {
 }
 
 async function ArtistList() {
+  await io();
   let artists: Artist[];
   try {
     artists = await getArtists();
@@ -50,7 +52,7 @@ function ArtistCard({ artist, priority }: { artist: Artist; priority: boolean })
       className="group relative isolate flex aspect-[4/3] items-end overflow-hidden rounded-2xl bg-linear-to-br from-(--artist-color) to-foreground p-6 shadow-card"
     >
       {artist.heroImageUrl && (
-        <Image
+        <Image unoptimized
           src={artist.heroImageUrl}
           alt=""
           fill

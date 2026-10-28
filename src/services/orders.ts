@@ -1,104 +1,109 @@
-import { createClient } from '@/lib/supabase/client';
 import type { CreateOrderInput, Order, OrderStatus, OrderSummary } from '@/types/app';
-import { AppError, toAppError } from './errors';
+import { ApiError, apiFetch, isLoggedIn, jsonBody } from './api';
+import { AppError } from './errors';
+import { readOrderHistory } from './orderHistory';
 
-// 비로그인 상태로 RPC를 부르면 권한 에러(UNKNOWN)가 나므로 먼저 막음
-async function requireAuth() {
-  const supabase = createClient();
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) throw new AppError('NOT_AUTHENTICATED');
-  return supabase;
+// 주문·바로 구매·모의 결제·취소: FastAPI /orders (P3). 서버가 소유권(403)·재고·구매 제한을 검사한다
+
+// 토큰 없이 부르면 401이므로 먼저 막음
+function requireAuth() {
+  if (!isLoggedIn()) throw new AppError('NOT_AUTHENTICATED');
 }
 
+// FastAPI 주문 응답 (snake_case)
+type OrderResponse = {
+  id: string;
+  status: string;
+  items_price: number;
+  shipping_fee: number;
+  total_price: number;
+  is_direct: boolean;
+  recipient_name: string;
+  recipient_phone: string;
+  address: string;
+  items: { variant_id: number; product_name: string; option_name: string; unit_price: number; quantity: number }[];
+  created_at: string;
+  paid_at: string | null;
+  cancelled_at: string | null;
+};
+
+const toRecipient = (input: CreateOrderInput) => ({
+  recipient_name: input.recipientName,
+  recipient_phone: input.recipientPhone,
+  address: input.address,
+});
+
 export async function createOrder(input: CreateOrderInput): Promise<string> {
-  const supabase = await requireAuth();
-  const { data, error } = await supabase.rpc('create_order', {
-    p_recipient_name: input.recipientName,
-    p_recipient_phone: input.recipientPhone,
-    p_address: input.address,
-  });
-  if (error) throw toAppError(error);
-  return data;
+  requireAuth();
+  const order = await apiFetch<OrderResponse>('/orders', { method: 'POST', ...jsonBody(toRecipient(input)) });
+  return order.id;
 }
 
 // 바로 구매: 장바구니와 상관없이 옵션 하나만 주문. 결제해도 장바구니는 그대로 둔다.
 export async function createDirectOrder(variantId: number, quantity: number, input: CreateOrderInput): Promise<string> {
-  const supabase = await requireAuth();
-  const { data, error } = await supabase.rpc('create_direct_order', {
-    p_variant_id: variantId,
-    p_quantity: quantity,
-    p_recipient_name: input.recipientName,
-    p_recipient_phone: input.recipientPhone,
-    p_address: input.address,
+  requireAuth();
+  const order = await apiFetch<OrderResponse>('/orders/direct', {
+    method: 'POST',
+    ...jsonBody({ ...toRecipient(input), variant_id: variantId, quantity }),
   });
-  if (error) throw toAppError(error);
-  return data;
+  return order.id;
 }
 
 export async function payOrder(orderId: string): Promise<void> {
-  const supabase = await requireAuth();
-  const { error } = await supabase.rpc('pay_order', { p_order_id: orderId });
-  if (error) throw toAppError(error);
+  requireAuth();
+  await apiFetch<OrderResponse>(`/orders/${encodeURIComponent(orderId)}/pay`, { method: 'POST' });
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  const supabase = await requireAuth();
-  const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
-  if (error) throw toAppError(error);
+  requireAuth();
+  await apiFetch<OrderResponse>(`/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST' });
 }
 
-type OrderRow = {
-  id: string;
-  status: string;
-  total_price: number;
-  created_at: string;
-  order_items: { product_name: string; quantity: number }[];
-};
+// 장바구니·주문서 배송비 안내 (로그인 불필요). 실제 배송비는 주문 생성 때 서버가 같은 설정으로 계산
+export async function getShippingPolicy(): Promise<{ freeShippingThreshold: number; shippingFee: number }> {
+  const p = await apiFetch<{ free_shipping_threshold: number; shipping_fee: number }>('/orders/shipping-policy');
+  return { freeShippingThreshold: p.free_shipping_threshold, shippingFee: p.shipping_fee };
+}
 
-const toSummary = (o: OrderRow): OrderSummary => ({
+const toSummary = (o: OrderResponse): OrderSummary => ({
   id: o.id,
   status: o.status as OrderStatus,
   totalPrice: o.total_price,
-  itemCount: o.order_items.length,
-  firstItemName: o.order_items[0]?.product_name ?? '',
+  itemCount: o.items.length,
+  firstItemName: o.items[0]?.product_name ?? '',
   createdAt: o.created_at,
 });
 
+// 최신순 전체 내역. 100건 이후 주문도 가져와 상태 탭의 목록과 개수에서 빠지지 않게 한다.
 export async function getOrders(): Promise<OrderSummary[]> {
-  const supabase = await requireAuth();
-  const { data, error } = await supabase
-    .from('orders')
-    .select('id, status, total_price, created_at, order_items(product_name, quantity)')
-    .order('created_at', { ascending: false })
-    .order('id', { referencedTable: 'order_items' });
-  if (error) throw toAppError(error);
-  return data.map(toSummary);
+  requireAuth();
+  const orders = await readOrderHistory((page, size) =>
+    apiFetch<{ items: OrderResponse[]; total: number }>(`/orders?page=${page}&size=${size}`),
+  );
+  return orders.map(toSummary);
 }
 
 export async function getOrder(orderId: string): Promise<Order | null> {
-  const supabase = await requireAuth();
-  const { data, error } = await supabase
-    .from('orders')
-    .select(
-      'id, status, total_price, shipping_fee, created_at, recipient_name, recipient_phone, address, paid_at, cancelled_at, order_items(variant_id, product_name, option_name, unit_price, quantity)',
-    )
-    .eq('id', orderId)
-    .order('id', { referencedTable: 'order_items' })
-    .maybeSingle();
-  if (error?.code === '22P02') return null; // uuid 형식이 아닌 id
-  if (error) throw toAppError(error);
-  if (!data) return null; // 없거나 남의 주문 (RLS)
+  requireAuth();
+  let data: OrderResponse;
+  try {
+    data = await apiFetch<OrderResponse>(`/orders/${encodeURIComponent(orderId)}`);
+  } catch (error) {
+    // 없는 주문(404)·남의 주문(403)·uuid 형식 아님(422)은 예전처럼 '없음'으로 다룬다. 서버 연결 실패는 오류 그대로
+    if (error instanceof ApiError && [403, 404, 422].includes(error.status)) return null;
+    throw error;
+  }
 
   return {
     ...toSummary(data),
-    itemsPrice: data.total_price - data.shipping_fee,
+    itemsPrice: data.items_price,
     shippingFee: data.shipping_fee,
     recipientName: data.recipient_name,
     recipientPhone: data.recipient_phone,
     address: data.address,
     paidAt: data.paid_at,
     cancelledAt: data.cancelled_at,
-    items: data.order_items.map((i) => ({
+    items: data.items.map((i) => ({
       variantId: i.variant_id,
       productName: i.product_name,
       optionName: i.option_name,

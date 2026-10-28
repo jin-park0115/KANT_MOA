@@ -1,0 +1,356 @@
+# P4. 관리자 페이지 · 관리자 API 설계 (최종)
+
+담당: 장충만 · 작성일: 2026-10-23 · 최종 갱신: 2026-10-28 · 상태: **최종** (구현은 PR #1·#50·#62로 main에 반영, 검증 결과는 10절)
+
+> 기준 문서: [`docs/PROJECT2.md`](../PROJECT2.md) (P1 공통 기반·개발 계약). 이 문서와 다르면 **PROJECT2.md가 우선**이에요.
+>
+> 인수 당시(`takeover-base` = `main` `f446b8a`) 칸트모아에는 **관리자 기능과 역할(role) 구분이 없었어요.**
+> 상품·공지는 마이그레이션 SQL로만 관리했어요. P4는 이 부분을 FastAPI로 **새로 만드는** 확장 기능이에요.
+
+---
+
+## 1. 기능 범위
+
+| 구분 | 기능 | 비고 |
+|---|---|---|
+| **필수** | 관리자 상품 목록 (검색·필터·정렬·페이지네이션, 재고 합계·품절 표시) | 숨김(`hidden`) 상품도 보여요 |
+| **필수** | 상품 상세의 옵션별 재고 조회 | 옵션(`product_variants`) 단위 |
+| **필수** | 옵션 재고 조정 (입고 +, 수정 −) | 재고 규칙은 P2 상품 도메인 `increase_stock` / `decrease_stock` 사용 |
+| **필수** | 판매 상태 변경 (`on_sale` / `sold_out` / `hidden`) | |
+| **필수** | 권한 검증: 비로그인 401, 일반 회원 403 | P1 `require_admin` 의존성 사용 (P1 구현 후) |
+| 선택 | 재고 변경 이력 조회 | 시간이 남으면 |
+| 선택 | 상품 등록 + 대표 이미지 업로드 (`backend/uploads/` → `/uploads/`) | 시간이 남으면. 업로드 검사(형식·용량·서버 생성 파일명)는 아직 아무도 구현 안 함 → 하게 되면 P4가 같이 구현 |
+| 선택 | 공지 등록·수정·삭제 | 시간이 남으면 |
+
+---
+
+## 2. 관리자 화면 흐름 (Next.js)
+
+```
+헤더 MY 메뉴 ─(ADMIN만 "관리자" 링크 노출)─▶ /admin  ─▶ /admin/products  (상품 목록)
+                                                              │ 행 클릭
+                                                              ▼
+                                                     /admin/products/[id]  (옵션별 재고·판매 상태)
+```
+
+| 화면 | 구성 | 상태 처리 |
+|---|---|---|
+| `/admin/products` | 검색창(상품명), 필터(아티스트·카테고리·판매 상태·재고: 전체/품절/부족), 정렬(최신·재고 적은 순), 표(썸네일·상품명·아티스트·가격·판매 상태·재고 합계), 페이지 이동 | 로딩 · 빈 결과 · 오류 |
+| `/admin/products/[id]` | 상품 정보, 판매 상태 선택, 옵션 표(옵션명·현재 재고·구매 제한), 옵션마다 "재고 조정" 입력(+/− 수량, 사유) | 저장 중 버튼 비활성, 성공 안내, 409·404 오류 메시지 |
+
+- 접근 처리: 비로그인 → `/login?next=/admin/...`, 일반 회원 → "접근 권한이 없어요" 화면
+- **화면에서 링크를 숨기는 것은 편의일 뿐**이고, 실제 권한 검증은 FastAPI가 매 요청마다 해요. ADMIN 여부는 **서버가 검증한 사용자 정보** 기준이에요 (PROJECT2.md 인증 계약).
+- 관리자 API는 로그인 토큰이 필요하므로 **클라이언트 컴포넌트에서 호출**해요.
+- 프론트는 아직 Supabase에 연결돼 있어요. `NEXT_PUBLIC_API_URL` 연결·토큰 저장 방식이 정해지면(P1 후속) 관리자 화면을 그 방식에 맞춰 붙여요. 그 전에는 Swagger(`http://localhost:8000/docs`)로 API부터 검증해요.
+
+---
+
+## 3. 관리자 API 명세 (최종)
+
+공통 (PROJECT2.md 공통 API 계약 따름)
+- 기본 주소 `http://localhost:8000`, 경로 접두사 `/admin` (`/api` 접두사 없음)
+- 모든 API에 `Authorization: Bearer <JWT>` 필요, `role = ADMIN`만 허용 (`Depends(require_admin)`)
+- 목록 응답: `core.schemas.PageResponse` → `{ "items": [...], "total": 0, "page": 1, "size": 20 }`. `total`은 필터 후·페이지 적용 전 개수
+- 오류 응답: `{ "code": "...", "message": "..." }`. 표현 계층에서 도메인 예외를 `core.errors.ApiError`로 바꿔 던져요
+
+### 3-1. 상품 목록
+
+`GET /admin/products`
+
+| 쿼리 | 타입 | 기본값 | 설명 |
+|---|---|---|---|
+| `q` | string | - | 상품명 부분 일치 |
+| `artist` | string | - | 아티스트 slug |
+| `category` | string | - | 카테고리 slug |
+| `status` | `on_sale` \| `sold_out` \| `hidden` | - | 판매 상태 |
+| `stock` | `out` \| `low` | - | `out`: 재고 합계 0, `low`: 옵션 중 하나라도 재고 ≤ 5 |
+| `sort` | `latest` \| `stock_asc` \| `name` | `latest` | 정렬 |
+| `page` | int ≥ 1 | 1 | |
+| `size` | int 1~100 | 20 | |
+
+응답 `200`
+```json
+{
+  "items": [
+    {
+      "id": 12,
+      "name": "BTS 공식 응원봉 SE",
+      "artist": { "slug": "bts", "name": "BTS" },
+      "category": { "slug": "cheering", "name": "응원용품" },
+      "price": 45000,
+      "status": "on_sale",
+      "thumbnail_url": "/static/products/bts/.../main.webp",
+      "total_stock": 37,
+      "variant_count": 1,
+      "is_sold_out": false
+    }
+  ],
+  "total": 387,
+  "page": 1,
+  "size": 20
+}
+```
+
+- `thumbnail_url`은 DB에 저장된 **상대 경로**(`/static/...` 또는 `/uploads/...`) 그대로 내려주고, 프론트가 API origin과 조합해요 (PROJECT2.md 이미지 계약).
+- `is_sold_out` 계산 (10/26 상재님 확정): `status`가 `sold_out`이면 true, `on_sale`이고 옵션 재고 합계가 0이면 true, 그 밖(`hidden` 포함)은 false. DB `status`는 재고 때문에 자동으로 바뀌지 않아요.
+- `stock=low` 필터는 옵션 중 하나라도 재고가 5 이하인 상품이에요 (`LOW_STOCK_THRESHOLD = 5`).
+- 상품 `id` 타입(정수/UUID)은 P2 상품 테이블을 따라요. 위 예시는 정수로 가정했어요.
+
+### 3-2. 상품 상세 (옵션별 재고)
+
+`GET /admin/products/{product_id}`
+
+응답 `200`
+```json
+{
+  "id": 12,
+  "name": "BTS 공식 응원봉 SE",
+  "artist": { "slug": "bts", "name": "BTS" },
+  "category": { "slug": "cheering", "name": "응원용품" },
+  "price": 45000,
+  "status": "on_sale",
+  "thumbnail_url": "/static/products/bts/.../main.webp",
+  "variants": [
+    { "id": 301, "option_name": "기본", "extra_price": 0, "stock": 37, "max_per_user": 4 }
+  ]
+}
+```
+
+### 3-3. 옵션 재고 조정
+
+`POST /admin/products/{product_id}/variants/{variant_id}/stock-adjustments`
+
+- 재고를 "몇 개로 바꾼다"가 아니라 **"몇 개 늘리거나 줄인다"(증감)** 로 받아요.
+  같은 순간에 주문(P3)이 재고를 빼도, 관리자가 본 예전 숫자로 덮어써서 주문 수량이 사라지는 일이 없어요.
+
+요청
+```json
+{ "change": 10, "reason": "입고" }
+```
+
+| 필드 | 규칙 |
+|---|---|
+| `change` | 정수, 0 불가, -10000 ~ 10000 |
+| `reason` | 선택, 최대 100자 (예: 입고, 불량, 재고 실사) |
+
+응답 `200`
+```json
+{ "variant_id": 301, "before": 37, "after": 47, "change": 10 }
+```
+
+### 3-4. 판매 상태 변경
+
+`PATCH /admin/products/{product_id}`
+
+요청 `{ "status": "hidden" }` → 응답 `200` 상품 상세(3-2와 같은 형식)
+
+- `status`: `on_sale` / `sold_out` / `hidden` 중 하나. 다른 값·다른 필드·빈 요청은 422
+- 세 상태 사이는 자유롭게 바꿀 수 있어요. 재고 0인 상품을 `on_sale`로 바꿔도 막지 않고 `is_sold_out: true`로 보여줘요 (상태 자동 변경 없음)
+- 없는 상품 404. 실패하면 rollback 해서 상태가 바뀌지 않아요
+- 같은 상태로 다시 보내도 200 (결과 동일)
+- 10/26 상재님 확인: `products.status` 변경은 데이터 수정이라 마이그레이션 불필요. P2 상태 변경 함수가 생기면 그 함수로 연결하고, 그전까지 P4 어댑터 UPDATE 사용
+  - 조건: 허용 상태 검증, `require_admin` 권한 검사, UPDATE는 `status`만 바꾸고 재고(`product_variants.stock`)는 건드리지 않음
+  - 트랜잭션: 저장소(`SqlProductStatusWriter`)는 commit 안 함, `AdminProductStatusService`가 commit·rollback
+
+### 3-5. (선택) 재고 변경 이력
+
+`GET /admin/products/{product_id}/stock-adjustments?page=&size=` → `{ items: [{ variant_id, change, before, after, reason, admin_id, created_at }], total, page, size }`
+
+- `admin_id`는 사용자 UUID (PROJECT2.md 인증 계약의 `users.id`)
+
+### 3-7. (선택) 공지 관리 — #40
+
+사용자 화면의 공지 조회는 P2 담당이고, P4는 관리자 등록·수정·삭제만 맡아요. `notices` 테이블이 이미 있어서 DB 구조 변경은 없어요.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/admin/notices?artist=&page=&size=` | 공지 목록 (고정 먼저, 최신순). `artist=all`이면 전체 공지만 |
+| GET | `/admin/notices/{id}` | 공지 상세 |
+| POST | `/admin/notices` | 공지 등록 → `201` |
+| PATCH | `/admin/notices/{id}` | 보낸 필드만 수정. `artist_slug`·`product_id`·`body`는 `null`로 보내면 연결/내용을 지움 |
+| DELETE | `/admin/notices/{id}` | 공지 삭제 → `204` |
+
+요청 예시
+```json
+{ "title": "응원봉 2차 판매 안내", "body": "## 안내\n- 10/30 20:00 오픈", "artist_slug": "bts", "product_id": 12, "is_pinned": true, "show_in_topbar": false }
+```
+
+| 필드 | 규칙 |
+|---|---|
+| `title` | 앞뒤 공백 제거 후 1~100자 |
+| `body` | 선택, 최대 5000자 (줄 단위 표시) |
+| `artist_slug` | 선택, 없으면 전체 공지. 없는 아티스트면 422 |
+| `product_id` | 선택, 없는 상품이면 422 |
+| `is_pinned`, `show_in_topbar` | true/false만 |
+
+응답: `{ id, title, body, artist: {slug, name} | null, product_id, product_name, is_pinned, show_in_topbar, published_at }`. 없는 공지 404.
+
+### 3-8. (선택) 상품 대표 이미지 교체 — #39
+
+`PUT /admin/products/{product_id}/thumbnail` — 요청 본문에 이미지 파일 그대로 (multipart 아님, 새 패키지 추가 없음)
+
+- `Content-Type`: `image/jpeg` / `image/png` / `image/webp`, 파일 앞부분(매직 바이트)도 형식과 일치해야 함, 5MB 이하 → 아니면 422
+- 저장: `backend/uploads/products/<새 이름>.<확장자>` (원본 파일명 안 씀, 교체도 항상 새 파일명), DB `products.thumbnail_path` = `/uploads/products/...`
+- 응답 `200` 상품 상세(3-2 형식, `thumbnail_url`이 새 경로). 없는 상품 404
+- DB 변경이 실패하면 rollback 하고 방금 저장한 파일도 지움. 이전 파일은 지우지 않음
+
+### 3-6. 오류 코드
+
+PROJECT2.md 기준: 코드명은 기존 `src/constants/error-messages.ts` / `src/services/errors.ts`를 따르고, **신규 코드는 임의로 추가하지 않아요.** 없는 경우는 `UNKNOWN` + 의미 있는 메시지를 써요.
+
+| 상황 | 상태 | 지금 쓰는 code (현재 계약) | 추가 제안 code (합의 필요) |
+|---|---|---|---|
+| 토큰 없음·서명 실패·만료·블랙리스트·없는 사용자 | 401 | `NOT_AUTHENTICATED` (기존) | - |
+| 일반 회원(USER)이 관리자 API 호출 | 403 | `UNKNOWN` · "접근 권한이 없어요." | `FORBIDDEN` |
+| 없는 상품 / 다른 상품의 옵션 id | 404 | `UNKNOWN` · "상품을 찾을 수 없어요." / "옵션을 찾을 수 없어요." | `PRODUCT_NOT_FOUND` / `VARIANT_NOT_FOUND` |
+| 조정 후 재고가 0 미만 | 409 | `UNKNOWN` · "재고는 0개보다 적을 수 없어요." | `INVALID_STOCK` |
+| `change` = 0, 범위 초과, 잘못된 `status`·`sort`·`page` | 422 | `UNKNOWN` · "입력 형식을 확인해주세요." (P1 공통 핸들러) | - |
+
+> 추가 제안 code는 팀이 합의하면 `src/services/errors.ts`의 `APP_ERROR_CODES`, `src/constants/error-messages.ts`, 백엔드 코드를 **한 PR에서 같이** 바꿔요. 합의 전에는 위 "지금 쓰는 code"로 구현해요.
+> 기존 `OUT_OF_STOCK`("품절된 상품이 있어요")은 주문용 문구라 관리자 재고 조정 409에는 쓰지 않아요.
+
+---
+
+## 4. 업무 규칙 (도메인)
+
+| 규칙 | 어디서 | 위반 시 |
+|---|---|---|
+| 재고는 0 미만이 될 수 없다 | **P2 상품 도메인** (`increase_stock` / `decrease_stock`) | 409 |
+| 조정 수량은 0이 아니어야 하고 범위 안이어야 한다 | P4 `StockAdjustment` (도메인) + 요청 스키마 | 422 |
+| 옵션은 그 상품에 속해야 한다 | P4 서비스 (조회 후 확인) | 404 |
+| 판매 상태는 `on_sale`·`sold_out`·`hidden` 중 하나 | P2 상품 도메인 | 422 |
+| 관리자만 접근 | P1 `require_admin` | 401 / 403 |
+
+트랜잭션 (PROJECT2.md 구조·트랜잭션 계약)
+- `get_session`은 자동 commit하지 않아요. **commit/rollback은 P4 응용 서비스(`service.py`)가** 하나의 업무 단위에서 해요.
+- Repository는 commit하지 않고 필요하면 flush만 해요. ORM ↔ 도메인 객체 변환도 Repository가 해요.
+- 재고 조정 흐름: 옵션 행 잠금 조회 → 도메인 규칙(`increase_stock`/`decrease_stock`) → 저장 → commit, 실패하면 rollback.
+- 잠금 방식 **합의 (10/25 여름)**: `SELECT ... FOR UPDATE`.
+  - 잠금 조회는 **P2 repository의 `get_variants_for_update(variant_ids)` 한 곳**(`with_for_update()`)만 쓰고 P3 결제·P4 재고 조정이 같이 호출해요. 재고 코드 한 곳 원칙 유지.
+  - 여러 옵션을 잠글 때는 **항상 id 오름차순**(`ORDER BY id`)으로 잠가 데드락을 막아요.
+  - 잠금은 commit/rollback 때 풀리므로 트랜잭션은 각 서비스에서 짧게 가져가요.
+- 도메인(`admin/domain/`)은 FastAPI·SQLAlchemy·Pydantic을 import하지 않아요.
+- 이전 팀 알려진 문제: "재고가 0이 돼도 `status`가 `sold_out`으로 자동으로 안 바뀜" → **10/26 확정**: DB status는 자동으로 바꾸지 않고, 조회할 때 `is_sold_out`을 계산해서 내려준다 (5장 질문 3).
+
+---
+
+## 5. 다른 담당과 맞출 것
+
+| 상대 | 필요한 것 | 질문 / 상태 |
+|---|---|---|
+| **P1 (희주)** | `auth.presentation.dependencies.require_admin`, `users.role`(USER/ADMIN), 사용자 UUID | 1. **답변 완료 (10/24 희주)**: 관리자는 공개 회원가입 불가, 로컬 초기화 명령으로 생성(고정 비밀번호 저장소 금지). `get_current_user`·`require_admin`·초기화 명령은 **월요일(10/26)** 구현·공유. import 경로는 `from auth.presentation.dependencies import get_current_user, require_admin`으로 확정. 그 전까지 P4는 테스트에서 `require_admin`을 가짜 의존성으로 바꿔 검증하고, 실제 토큰 401·일반 회원 403·관리자 성공·로그아웃 토큰 차단은 인증 연결 후 검증. |
+| **P1 (희주)** | 공통 파일 `main.py`에 관리자 라우터 등록 | 5. **답변 완료 (10/24 희주)**: 관리자 라우터 import와 `app.include_router(...)`는 P4 구현 PR에 포함해도 됨(협의 완료). 인증 의존성이 main에 들어오기 전에는 import 때문에 서버 실행이 깨지지 않게 **통합 시점을 인증 PR 이후로** 맞추고, PR에서 희주님께 리뷰 요청. |
+| **P2 (상재)** | 상품·옵션 ORM 모델, 상품 도메인 재고 규칙, 상품 id 타입 | 2. **답변 완료 (10/26 상재, PR #1)**: 숨김 포함 관리자 조회는 P4 Repository에 **조회 전용**으로 둔다. 상품·옵션 ORM 모델은 **P2 모델을 재사용**(P4가 따로 만들지 않음). |
+| **P2 (상재)** | 판매 상태 규칙 | 3. **답변 완료 (10/26 상재, PR #1)**: 재고 0이어도 DB `status`는 **자동 변경하지 않음**. 품절은 **조회 시 계산**: 판매 중(`on_sale`)인데 옵션 재고 합계 0이면 `is_sold_out=true`. 관리자가 정한 `hidden`·수동 `sold_out`은 유지. → `admin/domain/product_view.py`의 `is_sold_out`으로 구현 |
+| **P2·P3 (상재·여름)** | 재고 잠금 방식 | 4. **답변 완료 (10/25 여름, 10/26 상재 확정)**: `FOR UPDATE`. P2가 `get_variants_for_update`와 도메인 재고 증감·저장을 제공하고, P4는 infrastructure에서 `VariantStockPort`에 연결하며 **같은 AsyncSession**을 쓴다. commit/rollback은 각 응용 서비스가 담당. 여러 옵션은 id 오름차순으로 잠금. |
+| **전원** | 신규 오류 code | 6. **P1 의견 (10/24 희주)**: 우선 현재 공통 계약대로 `UNKNOWN` + 상황별 메시지, HTTP 상태는 403·404·409·422로 구분. 신규 code(`FORBIDDEN` 등)는 필요하면 팀 합의 후 프론트 오류 매핑·백엔드·문서를 함께 수정. → P4는 3-6 "지금 쓰는 code"로 구현 |
+
+---
+
+## 6. 4계층 파일 계획 (`backend/src/admin/`)
+
+PROJECT2.md 구조: `presentation/router.py + schemas.py → application/service.py → domain/ → infrastructure/models.py + repositories.py`
+
+| 계층 | 파일 | 하는 일 |
+|---|---|---|
+| presentation | `router.py` | `/admin` 라우터, 라우터 전체에 `Depends(require_admin)`. **재고 조정 `POST .../stock-adjustments` 구현 (10/25)**, **목록 `GET /admin/products`·상세 `GET /admin/products/{id}` 구현 (10/26)**, **판매 상태 변경 `PATCH /admin/products/{id}` 구현 (10/26)** |
+| presentation | `errors.py` | 도메인 예외 → `ApiError(상태, "UNKNOWN", 메시지)`: 잘못된 조정 422, 상품·옵션 없음 404, 재고 부족 409 |
+| presentation | `dependencies.py` | P1 `require_admin` 사용(통합 전엔 모든 요청 401로 차단하는 대체 함수), `get_admin_stock_service`(P2 연결 전엔 503) |
+| presentation | `schemas.py` | 재고 조정 `StockAdjustmentRequest/Response`, `ProductStatusUpdate`, **목록·상세 응답 `AdminProductListItem`·`AdminProductDetail`·`AdminVariantItem`, 목록 쿼리 `AdminProductQuery` (10/26)**. 목록은 `PageResponse[AdminProductListItem]` |
+| application | `ports.py` | 바깥에 기대하는 모양: `VariantStockPort`(잠금 조회·증감), `TransactionPort`(commit/rollback). 실제 연결은 infrastructure에서 P2 함수로 |
+| application | `stock_service.py` | **재고 조정** `AdminStockService.adjust`: 잠금 조회 → 상품 소속 확인 → P2 증감 → commit, 실패 시 rollback (10/25 구현) |
+| application | `product_service.py` | **목록·상세 조회 `AdminProductService` (10/26, 조회 전용, 없는 상품 404)**, **판매 상태 변경 `AdminProductStatusService` (변경 → 상세 조회 → commit, 실패 시 rollback, 10/26)** |
+| domain | `stock_adjustment.py` | `StockAdjustment` (change ≠ 0, 범위, 사유 길이), 관리자 도메인 예외(`InvalidStockAdjustment`·`ProductNotFound`·`VariantNotFound`·`InsufficientStock`) |
+| domain | `product_view.py` | 품절 계산 `is_sold_out(status, total_stock)`, 재고 요약 `summarize_stock`(합계·옵션 수·부족 여부) (10/26) |
+| infrastructure | `product_queries.py` | **관리자 상품 목록·상세 조회(숨김 포함·재고 합계·검색/필터/정렬/페이지, 바인딩 파라미터만)** — P2 ORM 모델 재사용 (10/26). (선택) 재고 이력 저장. 옵션 잠금 조회는 P2 `get_variants_for_update` 사용. commit 안 함 |
+| infrastructure | `models.py` | (선택) 재고 이력 `stock_adjustments` 테이블만. 상품·옵션 모델은 P2 것을 import, `database.Base` 공유 |
+
+---
+
+## 7. 403·권한 검증 시나리오 (월요일 Swagger·화면으로 캡처)
+
+자동 테스트는 `backend`에서 `uv run pytest`. 실제 DB 확인은 `docker compose up -d db` 후 `http://localhost:8000/docs`.
+
+| # | 상황 | 기대 결과 |
+|---|---|---|
+| 1 | 토큰 없이 `GET /admin/products` | 401 `NOT_AUTHENTICATED` |
+| 2 | 일반 회원 토큰으로 `GET /admin/products` | 403 (code는 3-6 합의 결과에 따름) |
+| 3 | 관리자 토큰으로 `GET /admin/products` | 200, 숨김 상품 포함 |
+| 4 | 관리자 로그아웃 후 같은 토큰으로 재호출 | 401 (블랙리스트) |
+| 5 | 재고 37인 옵션에 `change: -40` | 409, 재고 37 그대로 (rollback 확인) |
+| 6 | `change: 0` | 422 |
+| 7 | 다른 상품의 옵션 id로 조정 | 404 |
+| 8 | `change: 10` 후 상세 재조회·새로고침 | 재고 47 유지 (DB 반영 확인) |
+| 9 | 일반 회원으로 `/admin/products` 화면 접속 | "접근 권한이 없어요" 화면 |
+
+---
+
+## 8. 진행 체크
+
+10/23
+- [x] `admin/` 4계층 폴더 구조 (`backend/src/admin/`, 각 `__init__.py`)
+- [x] 관리자 기능 범위 (1장)
+- [x] 관리자 화면 구성·이동 흐름 (2장)
+- [x] 관리자 API 요청·응답 명세 초안 (3장)
+- [x] 403 검증 시나리오 (7장)
+- [x] `docs/PROJECT2.md` 공통 계약 반영 (오류 code, `require_admin`, 트랜잭션, 이미지 경로, 관리자 생성 방식)
+- [x] 5장 질문 1·5·6 답변 반영 (P1)
+- [x] 5장 질문 4 답변 반영 (10/25 여름: FOR UPDATE, 잠금 조회 P2 한 곳, id 오름차순)
+- [x] 5장 질문 2·3·4 상재님 답변 반영 (10/26, PR #1 댓글) → 5장 질문 1~6 모두 답변 완료
+
+10/24~25
+- [x] 로컬 실행 확인: Docker DB healthy, FastAPI 서버 시작 시 DB 연결 성공
+  - 5432 포트가 Windows에서 막혀 호스트 포트 5433 사용 (루트 `.env`·`backend/.env` 둘 다)
+  - Windows 앱 제어가 SQLAlchemy 속도용 `.pyd`를 차단 → `.venv\Lib\site-packages\sqlalchemy`의 `*.pyd`만 삭제(같은 기능의 `.py`로 동작), 서버는 `uv run --no-sync ...`로 실행
+
+다음 (P1 인증·P2 상품 모델 의존)
+- [x] 도메인 `StockAdjustment`·`StockAdjustmentResult`·관리자 도메인 예외 + 단위 테스트 (10/25, `backend/tests/admin/`)
+- [x] 요청 스키마 `StockAdjustmentRequest`·`ProductStatusUpdate`, 응답 `StockAdjustmentResponse` + 422 검증 테스트 (10/25)
+- [x] 재고 조정 서비스 `AdminStockService` + 가짜 저장소 테스트 5개 (10/25: 증가·감소 commit, 0 미만 rollback·재고 유지, 없는 옵션·다른 상품 옵션 404 rollback)
+- [x] P2 재고 연결 (10/26, PR #42 계약): `infrastructure/variant_stock.py` `P2VariantStockAdapter` — `get_variants_for_update([id])` → 누락·다른 상품 404 rollback → P2 `increase_stock/decrease_stock` → 같은 Repository `save_variant` → 서비스 commit. 테스트 5개 + 로컬 DB 통합(+5, 0 미만 409 후 재고 유지, 다른 상품 옵션 404)
+- [x] 품절 계산·재고 요약 도메인, 관리자 목록·상세 응답과 목록 쿼리 스키마 + 테스트 11개 (10/26) → `uv run pytest` 58 passed
+- [x] 관리자 목록·상세 조회 Repository(SQL, 조회 전용)·Service·라우터 + 테스트 (10/26: SQL 생성 5개, API 15개(200·401·403·404·422), 로컬 DB 통합 1개) → `uv run pytest` 77 passed, 1 skipped
+  - 로컬 DB 통합 테스트: `$env:ADMIN_DB_TEST="1"; uv run --no-sync pytest tests/admin/test_admin_product_db.py -q` (테스트 데이터는 트랜잭션 rollback으로 남지 않음, 로컬 DB에서만 실행)
+  - 이미지 경로 `thumbnail_path` → `/static/products/...` 변환은 잠정 규칙 (P2 이미지 이전 규칙 확정 후 맞춤)
+- [x] 판매 상태 변경 `PATCH /admin/products/{id}` 도메인·서비스·라우터 + 테스트 20개 (10/26: 상태 검증, commit·rollback, 200·401·403·404·422) + 로컬 DB 통합 테스트에 상태 변경 추가 → `uv run pytest` 97 passed, 1 skipped
+  - 상태 저장은 `infrastructure/product_status.py`(SQL UPDATE). P2 상품 저장소에 상태 변경 함수가 생기면 이 어댑터만 바꿈
+- [x] 관리자 조회·상태 변경·이미지 경로 변경을 P2 ORM 모델(`ProductModel`·`ArtistModel`·`CategoryModel`·`ProductVariantModel`) 재사용으로 정리 (10/26, 상재님 요청). 결과 동일: SQL 생성 테스트 5개 + 로컬 DB 통합 통과 (main 모델·`383acb9` 보완 모델 모두). 공지(`notices`)는 P2 ORM 모델이 없어 기존 SQL 유지
+- [x] (선택 #39) 상품 대표 이미지 교체 API + 상세 화면 "이미지 변경" 버튼 (10/26): 형식·크기·매직 바이트 검사, DB 실패 시 파일 삭제. 테스트 19개 + 로컬 DB 통합, 화면 업로드 후 `/uploads/...` 이미지 표시 확인
+- [x] (선택 #40) 공지 관리 API 등록·수정·삭제·목록·상세 + 테스트 28개(규칙, commit·rollback, 201·204·401·403·404·422) + 로컬 DB 통합 테스트 → `uv run pytest` 125 passed, 2 skipped
+  - 사용자 화면 노출은 P2 공개 공지 API 전환 후 확인 (#40 완료 조건)
+- [x] 재고 조정 라우터·오류 변환·의존성 + API 테스트 10개 (10/25: 관리자 200, 비로그인 401, 일반 회원 403, 0 미만 409·rollback, 다른 상품 옵션 404, 잘못된 입력 422, 통합 전 대체 의존성 차단) → `uv run pytest` 47 passed
+- [x] P1 `require_admin` main 반영(#49) 후 `main.py`에 `app.include_router(admin_router)` 등록 (10/27). 실제 P1 토큰으로 401/403/200, 로그아웃 후 401 확인
+- [x] P2 예외 변환: `InsufficientStock` → 409, `InvalidStock` → 422
+- [x] (#38) 관리자 화면 10/26: `/admin/products`(목록·검색·필터·정렬·페이지·상태 변경), `/admin/products/[id]`(상태 변경·옵션별 재고 증감·적용 후 미리보기), `/admin/notices`(등록·수정·삭제 확인)
+  - 파일: `src/app/admin/`, `src/components/admin/`, `src/services/admin/`(API 주소 `NEXT_PUBLIC_API_URL`, 기본 `http://localhost:8000`), `src/types/admin.ts`, `tests/adminForm.test.ts`
+  - 확인: `tsc` 통과, eslint 통과, `node --test tests/adminForm.test.ts` 4개 통과, 로컬 화면→API→DB 클릭 테스트(목록 필터·검색, 상태 변경, 재고 3→13, 없는 상품 안내, 공지 등록·422 안내·수정·삭제) 통과
+  - 남은 연결: 로그인 토큰은 `src/services/admin/client.ts`의 `getAdminAccessToken` 한 곳만 P1 방식으로 교체, 헤더 MY 메뉴의 "관리자" 링크(ADMIN만)는 P1 사용자 정보 연동 후 추가
+  - 재고 조정 화면 테스트: 실제 P2 재고 연결로 37→42 확인 (10/26)
+
+
+---
+
+## 10. 10/27 추가 — main.py 등록·대시보드·일괄 상태 변경·관리자 로그인
+
+| 기능 | API / 화면 | 규칙 |
+|---|---|---|
+| 관리자 API 서버 등록 | `backend/src/main.py` `app.include_router(admin_router)` | 공통 파일 1줄 추가. 라우터 전체 P1 `require_admin` |
+| 대시보드 요약 | `GET /admin/dashboard` → `/admin` | 전체·판매중·품절 처리·숨김·재고 없음(합계 0)·재고 부족(옵션 5개 이하). 숫자 기준 = 목록 필터와 같음 (카드 클릭 → 같은 개수 목록) |
+| 판매 상태 일괄 변경 | `POST /admin/products/bulk-status` `{product_ids: [1~100개], status}` | 중복·빈 목록·100개 초과 422, 없는 상품이 하나라도 있으면 404 + 전부 취소(rollback), `status`만 변경 |
+| 관리자 로그인·로그아웃 | `/admin/login` | P1 `POST /auth/login`(OAuth2 form) → `GET /auth/me`로 ADMIN 확인, 아니면 토큰 지우고 안내. 로그아웃은 `POST /auth/logout`(블랙리스트) 후 토큰 삭제. 토큰은 쇼핑 화면(`services/api.ts`)과 같은 localStorage 키 |
+
+실제 토큰 검증 (로컬 PostgreSQL, main 앱 그대로 실행, 관리자·일반 회원은 P1 서비스로 생성):
+
+| 시나리오 | 기대 | 실제 | DB (전 → 후) |
+|---|---|---|---|
+| 토큰 없이 `GET /admin/products` | 401 | 401 NOT_AUTHENTICATED | 변화 없음 |
+| 일반 회원 `GET /admin/dashboard` | 403 | 403 | 변화 없음 |
+| 일반 회원 일괄 숨김 | 403 | 403 | hidden → hidden (그대로) |
+| 관리자 대시보드 | 200 | 200 (전체 4, 재고 부족 2 …) | - |
+| 관리자 일괄 숨김 2개 | 200 | 200 updated 2 | 2: on_sale → hidden |
+| 관리자 일괄 (없는 상품 포함) | 404 | 404 | 상태 그대로 (rollback) |
+| 관리자 재고 +5 / -1000 | 200 / 409 | 200 / 409 | 12 → 17 / 17 → 17 |
+| 관리자 공지 등록 → 삭제 | 201 / 204 | 201 / 204 | notices 0 → 1 → 0 |
+| 로그아웃 후 같은 토큰 | 401 | 401 | token_blacklist 1행 |
+
+화면 확인: 비로그인 401 안내 → 일반 회원 로그인 거절 → 틀린 비밀번호 안내 → 관리자 로그인 → 대시보드 → "재고 부족" 카드 → 2개 목록 → 2개 선택 일괄 품절 → 로그아웃 → 다시 401 안내
