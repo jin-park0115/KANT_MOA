@@ -1,5 +1,7 @@
 # API 명세 (services 레이어)
 
+> **프로젝트1 인수 자료입니다.** 아래 Supabase·Vercel·옛 역할/브랜치·RPC 설명은 당시 기준으로 보존합니다. 현재 프로젝트2의 실행·개발 계약은 [README](../README.md)·[PROJECT2](PROJECT2.md), 최종 구현/운영은 [FINAL_STATUS](FINAL_STATUS.md)를 따릅니다. 이 문서의 초기 SQL·Supabase db push를 현재 공용 DB에 실행하지 않습니다.
+
 > 프론트가 호출하는 유일한 데이터 인터페이스는 `src/services/`입니다. 이 문서는 그 함수들의 입력·출력·에러를 정의합니다.
 > 별도 REST API는 없습니다. 내부적으로는 Supabase(`from().select()`, `rpc()`)를 호출합니다.
 > 스키마·RPC 원본은 `docs/DB_DESIGN.md`, 백엔드 규칙은 `docs/BACKEND.md`를 따릅니다.
@@ -13,6 +15,10 @@
 - 실패 시 `AppError`를 던집니다 (`error.code`로 분기, 메시지 변환은 `src/constants/error-messages.ts`).
 - 조회 함수에서 대상이 없으면 에러가 아니라 `null`을 반환합니다.
 - "호출 위치" — `서버`: 서버 컴포넌트에서 호출 가능, `클라이언트`: `'use client'` 컴포넌트에서 호출.
+
+## 10/29 회원 정보 수정 API 추가
+
+`GET /auth/me` 응답에 phone을 추가하고 `PATCH /auth/me`로 인증된 본인의 닉네임·연락처를 부분 수정합니다. 입력·401/422·데이터 보존·배포 상태는 [내 정보 수정 계약](PROFILE_UPDATE.md)을 확인합니다. 아래 함수 명세의 updateProfile은 이 FastAPI 경로를 사용하며 Supabase에 쓰지 않습니다.
 
 ## 1. 공용 타입
 
